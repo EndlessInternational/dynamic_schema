@@ -11,7 +11,7 @@ DynamicSchema ensures that your data structures are both robust and flexible.
 
 You can trivially define a custom schema:
 
-```
+```ruby
 openai_request_schema = DynamicSchema.define do 
   model           String, default: 'gpt-4o'
   max_tokens      Integer, default: 1024
@@ -28,7 +28,7 @@ end
 ```
 
 And then repetedly use that schema to elegantly build a schema conformant `Hash`:
-```
+```ruby
 request = openai_request_schema.build {
   message :system do 
     content text: "You are a helpful assistant that talks like a pirate."
