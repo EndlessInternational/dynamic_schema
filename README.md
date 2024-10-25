@@ -125,10 +125,10 @@ A *value* is the basic building blocks of your schema. Values represent individu
 options or API paramters that you can define with specific types, defaults, and other options.
 
 When defining a value, you provide the name as though you were calling a Ruby method, with 
-arguments that include an optional type (an instance of `Class`) as well as a `Hash` of options, 
-all of which are optional: 
+arguments that include an optional type (which can be a `Class`, `Module` or an `Array` of these ) 
+as well as a `Hash` of options, all of which are optional: 
 
-`name {Class} default: {true|false}, required: {true|false}, array: {true|false}, as: {name}, in: {Array|Range}`
+`name {type} default: {true|false}, required: {true|false}, array: {true|false}, as: {name}, in: {Array|Range}`
 
 #### example:
 
@@ -541,7 +541,7 @@ Each error includes helpful context about the validation failure, including the 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at [https://github.com/EndlessInternational/adaptive-schema](https://github.com/EndlessInternational/adaptive-schema).
+Bug reports and pull requests are welcome on GitHub at [https://github.com/EndlessInternational/adaptive-schema](https://github.com/EndlessInternational/dynamic-schema).
 
 ## License
 

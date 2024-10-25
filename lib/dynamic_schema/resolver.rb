@@ -36,21 +36,24 @@ module DynamicSchema
       options = nil
       if args.empty?
         options = {}
+      # when called with just options:              name as: :streams
       elsif first.is_a?( ::Hash )
-        # when called with just options:    parameter as: :streams
         options = first 
-      elsif args.length == 1 && ( first.is_a?( ::Class ) || first.is_a?( ::Array ) )
-        # when called with just type:       parameter Boolean
+      # when called with just type:                 name String 
+      #                                             name [ TrueClass, FalseClass ] 
+      elsif args.length == 1 && 
+            ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) )
         options = { type: first }
+      # when called with just type and options:     name String, default: 'the default'
       elsif args.length == 2 && 
-            ( first.is_a?( ::Class ) || first.is_a?( ::Array ) ) && 
+            ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) ) && 
             args[ 1 ].is_a?( ::Hash )
         options = args[ 1 ]
         options[ :type ] = args[ 0 ]
       else
         ::Kernel.raise \
           ::ArgumentError, 
-          "A schema definition may only include the type (Class) followed by options (Hash). "
+          "A schema definition may only include the type (Class or Module) followed by options (Hash). "
       end
 
       type = options[ :type ]
