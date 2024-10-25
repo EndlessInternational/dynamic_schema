@@ -122,11 +122,12 @@ module DynamicSchema
       required_arguments = [ required_arguments ].flatten if required_arguments
       required_count = required_arguments&.length || 0
       ::Kernel.raise ::ArgumentError, 
-            "The attribute #{name} requires #{required_count} arguments but #{count} was given." \
+          "The attribute '#{name}' requires #{required_count} arguments " \
+          "(#{required_arguments.join(', ')}) but #{count} was given." \
         if count < required_count 
       ::Kernel.raise ::ArgumentError, 
-            "The attribute #{name} should have at most #{required_count + 1} arguments but " \
-            "#{count} was given." \
+          "The attribute '#{name}' should have at most #{required_count + 1} arguments but " \
+          "#{count} was given." \
         if count > required_count + 1
       result = {}
       required_arguments&.each_with_index do | name, index  |
