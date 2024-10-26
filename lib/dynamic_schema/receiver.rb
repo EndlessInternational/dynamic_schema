@@ -103,7 +103,9 @@ module DynamicSchema
         @defaults_assigned[ method ] = false
         @values[ name ] = value 
       else
-        super
+        ::Kernel.raise ::NoMethodError, 
+          "There is no schema value or object '#{method}' defined in this scope which includes: " \
+          "#{@schema.keys.join( ', ' )}." 
       end
     end
 
