@@ -430,7 +430,7 @@ method can be called repeatedly, with subsequent calls augmenting, any preexsiti
 
 This can be used in a class hierarchy to augment base class schemas in derived classes. 
 
-```
+```ruby
 class DatabaSettings 
   include DynamicSchema::Definable 
   
@@ -467,7 +467,7 @@ that can be used to build the class instance. The attributes and block can be us
 
 **Important** Note that `Buildable` requires that the initializer accept a `Hash` of attributes.
 
-```
+```ruby
 class DatabaSettings 
   include DynamicSchema::Definable 
   include DynamicSchema::Buildable
