@@ -57,6 +57,9 @@ You can find a full OpenAI request example in the `/examples` folder of this rep
   - [as Option](#as-option)
   - [in Option (Values Only)](#in-option)
   - [arguments Option](#arguments-option)
+- [Class Schema](#class-schemas)
+  - [Definable](#definable) 
+  - [Buildable](#buildable) 
 - [Validation Methods](#validation-methods)
   - [Validation Rules](#validation-rules) 
   - [validate!](#validate)
@@ -412,6 +415,85 @@ result = schema.build! do
     content "Hello!"
   end
 end
+```
+
+## Class Schemas
+
+DynamicSchema provides a number of modules you can include into your own classes to simplify 
+their definition and construction. 
+
+### Definable 
+
+The `Definable` module, when inclued in a class, will add a `schema` class method to your class.
+You can call `schema` with a block and define a schema directly inside your class. The `schema`
+method can be called repeatedly, with subsequent calls augmenting, any preexsiting schema. 
+
+This can be used in a class hierarchy to augment base class schemas in derived classes. 
+
+```
+class DatabaSettings 
+  include DynamicSchema::Definable 
+  
+  schema do 
+    database do 
+      host  String
+      port  String 
+      name  String 
+    end 
+  end 
+
+  def initalize( attributes = {} )
+    # validate the attributes 
+    schema_builder = DynamicSchema::Builder.new.define( &class.schema )
+    schema_builder.validate!( attributes )
+    # initialize from the given attributes here 
+    @host = attributes[ :database ][ :host ]
+    @port = attributes[ :database ][ :port ]
+    @name = attributes[ :database ][ :name ]
+  end
+
+end 
+```
+
+### Buildable 
+
+The `Buildable` module can be included in a class, in addition to `Definable` to faciliate 
+building that class using a schema assisted builder pattern. The `Buildable` module adds 
+`build!` and `build` methods to the class which can be used to build that class, with and 
+without validation respectivelly. 
+
+These methods accept both a hash with attitbutes that follow the schema, as well as a block 
+that can be used to build the class instance. The attributes and block can be used simultanously. 
+
+**Important** Note that `Buildable` requires that the initializer accept a `Hash` of attributes.
+
+```
+class DatabaSettings 
+  include DynamicSchema::Definable 
+  include DynamicSchema::Buildable
+  
+  schema do 
+    database do 
+      adapter   Symbol 
+      host      String
+      port      String 
+      name      String 
+    end 
+  end 
+
+  def initalize( attributes = {} )
+    # assign the attributes
+    # ...
+  end
+
+end 
+
+database_settings = DatabaSettings.build! adapter: :pg do 
+  host     "localhost"
+  port     "127.0.0.1"
+  name     "mydb"
+end
+
 ```
 
 ## Validation
