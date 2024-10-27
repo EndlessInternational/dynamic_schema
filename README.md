@@ -139,7 +139,7 @@ as well as a `Hash` of options, all of which are optional:
 require 'dynamic_schema'
 
 # define a schema structure with values
-schema = DynamicSchema::Builder.new.define do
+schema = DynamicSchema.define do
   api_key
   version, String, default: '1.0'
 end
@@ -189,7 +189,7 @@ Notice an *object* does not accept a type as it is always of type `Object`.
 ```ruby
 require 'dynamic_schema'
 
-schema = DynamicSchema::Builder.new do
+schema = DynamicSchema.define do
   api_key, String
   chat_options do
     model String, default: 'claude-3'
@@ -236,7 +236,7 @@ the value. If you want to specify multiple types simply provide an array of type
 ```ruby
 require 'dynamic_schema'
 
-schema = DynamicSchema::Builder.new do
+schema = DynamicSchema.define do
   typeless_value
   symbol_value      Symbol 
   boolean_value     [ TrueClass, FalseClass ]
@@ -424,16 +424,30 @@ their definition and construction.
 
 ### Definable 
 
-The `Definable` module, when inclued in a class, will add a `schema` class method to your class.
-You can call `schema` with a block and define a schema directly inside your class. The `schema`
-method can be called repeatedly, with subsequent calls augmenting, any preexsiting schema. 
+The `Definable` module, when inclued in a class, will add the `schema` and the `builder` class 
+methods. 
 
-This can be used in a class hierarchy to augment base class schemas in derived classes. 
+By calling `schema` with a block you can define a schema for that specific class. You may also 
+retrieve the defined schema by calling 'schema' ( with or without a block ). The 'schema' method
+may be called repeatedly to build up a schema with each call adding to the existing schema 
+( replacing values and objects of the same name if they appear in subsequent calls ). 
 
-```ruby
-class DatabaSettings 
+The `schema` method will integrate with a class hierarchy. By including Definable in a base class 
+you can call `schema` to define a schema for that base class and then in subsequent dervied classes
+to augment it for those classes. 
+
+The `builder` method will return a memoized builder of the schema defined by calls to the `schema` 
+method which can be used to build and validate schema conformant hashes. 
+
+```ruby 
+class Setting 
   include DynamicSchema::Definable 
-  
+  schema do 
+    name String 
+  end 
+end 
+
+class DatabaSetting < Setting  
   schema do 
     database do 
       host  String
@@ -444,12 +458,9 @@ class DatabaSettings
 
   def initalize( attributes = {} )
     # validate the attributes 
-    schema_builder = DynamicSchema::Builder.new.define( &class.schema )
-    schema_builder.validate!( attributes )
-    # initialize from the given attributes here 
-    @host = attributes[ :database ][ :host ]
-    @port = attributes[ :database ][ :port ]
-    @name = attributes[ :database ][ :name ]
+    self.class.builder.validate!( attributes )
+    # retain them for future access 
+    @attributes = attributes&.dup 
   end
 
 end 
@@ -462,19 +473,25 @@ building that class using a schema assisted builder pattern. The `Buildable` mod
 `build!` and `build` methods to the class which can be used to build that class, with and 
 without validation respectivelly. 
 
-These methods accept both a hash with attitbutes that follow the schema, as well as a block 
+These methods accept both a hash with attributes that follow the schema, as well as a block 
 that can be used to build the class instance. The attributes and block can be used simultanously. 
 
-**Important** Note that `Buildable` requires that the initializer accept a `Hash` of attributes.
+**Important** Note that `Buildable` requires a class method `builder` ( which `Definable` 
+provides ) and an initializer that accepts a `Hash` of attributes.
 
 ```ruby
-class DatabaSettings 
+class Setting 
   include DynamicSchema::Definable 
   include DynamicSchema::Buildable
-  
+  schema do 
+    name String 
+  end 
+end 
+
+class DatabaSetting < Setting  
   schema do 
     database do 
-      adapter   Symbol 
+      adapter   Symbol, 
       host      String
       port      String 
       name      String 
@@ -482,18 +499,20 @@ class DatabaSettings
   end 
 
   def initalize( attributes = {} )
-    # assign the attributes
-    # ...
+    # validate the attributes 
+    self.class.builder.validate!( attributes )
+    # retain them for the future  
+    @attributes = attributes&.dup 
   end
-
 end 
 
-database_settings = DatabaSettings.build! adapter: :pg do 
-  host     "localhost"
-  port     "127.0.0.1"
-  name     "mydb"
+database_settings = DatabaSettings.build! name: 'settings.database' do 
+  database adapter: :pg do 
+    host     "localhost"
+    port     "127.0.0.1"
+    name     "mydb"
+  end 
 end
-
 ```
 
 ## Validation

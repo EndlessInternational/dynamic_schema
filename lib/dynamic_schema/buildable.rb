@@ -8,13 +8,11 @@ module DynamicSchema
     module ClassMethods
 
       def build( attributes = nil, &block )
-        @_builder ||= Builder.new.define( &self.schema )
-        new( @_builder.build( attributes, &block ) )
+        new( builder.build( attributes, &block ) )
       end 
 
       def build!( attributes = nil, &block )
-        @_builder ||= Builder.new.define( &self.schema )
-        new( @_builder.build!( attributes, &block ) )
+        new( builder.build!( attributes, &block ) )
       end 
 
     end 

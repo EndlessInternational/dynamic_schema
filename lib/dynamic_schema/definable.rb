@@ -8,14 +8,25 @@ module DynamicSchema
     module ClassMethods
 
       def schema( &block )
-        @_schema ||= []
-        @_schema << block if block_given?
+        @_schema ||= [] 
+        if block_given? 
+          # note that the memoized builder is reset when schema is called with a new block so 
+          # that additions to the schema are incorporated into future builder ( but this does
+          # not work if the schema is updated on a superclass after this class' builder has 
+          # been returned )
+          @_builder = nil 
+          @_schema << block 
+        end
         schema_blocks = _collect_schema
         proc do
           schema_blocks.each do | block |
             instance_eval( &block )
           end
         end
+      end
+
+      def builder 
+        @_builder ||= DynamicSchema.define( &schema )
       end
 
     protected 
