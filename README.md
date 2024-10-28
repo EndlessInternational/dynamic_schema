@@ -194,7 +194,7 @@ schema = DynamicSchema.define do
   chat_options do
     model String, default: 'claude-3'
     max_tokens Integer, default: 1024
-    temperature, Float, default: 0.5, in: 0..1
+    temperature Float, default: 0.5, in: 0..1
     stream [ TrueClass, FalseClass ]
   end
 end
