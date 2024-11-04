@@ -61,7 +61,7 @@ module DynamicSchema
               if criteria[ :type ] == Object
                 traverse_and_validate_values( 
                   values[ name ],
-                  schema: criteria[ :schema ] ||= criteria[ :resolver ].schema,
+                  schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema,
                   path: "#{ ( path || '' ) + ( path ? '/' : '' ) + key.to_s }", 
                   &block 
                 )
@@ -80,7 +80,7 @@ module DynamicSchema
                 groups.each do | group |
                   traverse_and_validate_values(
                     group, 
-                    schema: criteria[ :schema ] ||= criteria[ :resolver ].schema,
+                    schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema,
                     path: "#{ ( path || '' ) + ( path ? '/' : '' ) + key.to_s }", 
                     &block 
                   )

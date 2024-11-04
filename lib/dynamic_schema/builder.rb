@@ -15,7 +15,7 @@ module DynamicSchema
     end
 
     def define( &block )
-      self.schema = Resolver.new( self.schema ).resolve( &block ).schema 
+      self.schema = Resolver.new( self.schema ).resolve( &block )._schema 
       self
     end 
 

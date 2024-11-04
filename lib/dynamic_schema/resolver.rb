@@ -22,13 +22,37 @@ module DynamicSchema
       self
     end
         
-    def schema 
+    def _schema 
+
       if !@resolved && @block 
         @resolved_blocks << @block unless @resolved_blocks.include?( @block )
         self.instance_eval( &@block ) 
         @resolved = true
       end
       @schema 
+    end
+
+    def _value( name, options )
+      name = name.to_sym
+      ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
+        if ::DynamicSchema::Receiver.instance_methods.include?( name )
+  
+      _validate_in!( name, options[ :type ], options[ :in ] ) if options[ :in ] 
+      
+      @schema[ name ] = options
+      self
+    end
+
+    def _object( name, options = {}, &block )
+      name = name.to_sym
+      ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
+        if ::DynamicSchema::Receiver.instance_methods.include?( name )
+
+      @schema[ name ] = options.merge( {
+        type: ::Object,
+        resolver: Resolver.new( resolved_blocks: @resolved_blocks ).resolve( &block )
+      } )    
+      self
     end
 
     def method_missing( method, *args, &block )
@@ -58,9 +82,9 @@ module DynamicSchema
 
       type = options[ :type ]
       if type == ::Object || type.nil? && block 
-        _append_object( method, options, &block )
+        _object( method, options, &block )
       else 
-        _append_value( method, options )
+        _value( method, options )
       end
     
     end
@@ -91,27 +115,6 @@ module DynamicSchema
     end      
   
   private
-
-    def _append_value( name, options )
-      ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
-        if ::DynamicSchema::Receiver.instance_methods.include?( name )
-  
-      _validate_in!( name, options[ :type ], options[ :in ] ) if options[ :in ] 
-      
-      @schema[ name ] = options
-      self
-    end
-
-    def _append_object( name, options = {}, &block )
-      ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
-        if ::DynamicSchema::Receiver.instance_methods.include?( name )
-
-      @schema[ name ] = options.merge( {
-        type: ::Object,
-        resolver: Resolver.new( resolved_blocks: @resolved_blocks ).resolve( &block )
-      } )    
-      self
-    end
 
     def _validate_in!( name, type, in_option )
       ::Kernel.raise ::TypeError,
