@@ -1,7 +1,7 @@
 Gem::Specification.new do | spec |
 
   spec.name           = 'dynamicschema'
-  spec.version        = '1.0.0.beta03'
+  spec.version        = '1.0.0.beta04'
   spec.authors        = [ 'Kristoph Cichocki-Romanov' ]
   spec.email          = [ 'rubygems.org@kristoph.net' ]
 
