@@ -131,11 +131,14 @@ module DynamicSchema
           "The attribute '#{name}' should have at most #{required_count + 1} arguments but " \
           "#{count} was given." \
         if count > required_count + 1
+
       result = {}
+
       required_arguments&.each_with_index do | name, index  |
         result[ name.to_sym ] = arguments[ index ]
       end
-      
+      arguments.slice!( 0, required_arguments.length ) if required_arguments
+
       last = arguments.last
       case last 
       when ::Hash 

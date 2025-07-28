@@ -4,6 +4,7 @@ RSpec.describe DynamicSchema::Builder do
   describe 'object attributes with :arguments option' do
 
     context 'where the object has a single value' do
+
       it 'defines and builds the attributes correctly' do
         builder = described_class.new.define do 
           object arguments: :value do 
@@ -15,24 +16,106 @@ RSpec.describe DynamicSchema::Builder do
         end
         expect( result[ :object ][ :value ] ).to eq( :one )
       end
+
+      context 'where the value is an array' do 
+        context 'where a single value is given' do
+          it 'defines and builds the attributes correctly' do
+            builder = described_class.new.define do 
+              object arguments: :value do 
+                value array: :true 
+              end
+            end 
+            result = builder.build do 
+              object :one
+            end
+            expect( result[ :object ][ :value ] ).to eq( [:one] )
+          end
+        end
+
+        context 'where an array of values are given' do
+          it 'defines and builds the attributes correctly' do
+            builder = described_class.new.define do 
+              object arguments: :value do 
+                value array: :true 
+              end
+            end 
+            result = builder.build do 
+              object [ :one, :two ]
+            end
+            expect( result[ :object ][ :value ] ).to eq( [ :one, :two ] )
+          end
+        end
+      end
+
     end
 
     context 'where the object has a mutliple values' do
       
       context 'where the object has arguments for all values' do
-        it 'defines and builds the attributes correctly' do
-          builder = described_class.new.define do 
-            object arguments: [ :value, :other_value ] do 
-              value 
-              other_value
+        context 'where none of the values are an array' do 
+          it 'defines and builds the attributes correctly' do
+            builder = described_class.new.define do 
+              object arguments: [ :value, :other_value ] do 
+                value 
+                other_value
+              end
+            end 
+            result = builder.build do 
+              object :one, :two 
             end
-          end 
-          result = builder.build do 
-            object :one, :two 
+            expect( result[ :object ][ :value ] ).to eq( :one )
+            expect( result[ :object ][ :other_value ] ).to eq( :two )
           end
-          expect( result[ :object ][ :value ] ).to eq( :one )
-          expect( result[ :object ][ :other_value ] ).to eq( :two )
         end
+
+        context 'where one of the values is an array' do 
+          it 'defines and builds the attributes correctly' do
+            builder = described_class.new.define do 
+              object arguments: [ :value, :other_value ] do 
+                value array: true 
+                other_value
+              end
+            end 
+            result = builder.build do 
+              object [:one, :two], :three
+            end
+            expect( result[ :object ][ :value ] ).to eq( [:one, :two] )
+            expect( result[ :object ][ :other_value ] ).to eq( :three )
+          end
+        end
+
+        context 'where one of the values is an array but is passed as a single value' do 
+          it 'defines and builds the attributes correctly' do
+            builder = described_class.new.define do 
+              object arguments: [ :value, :other_value ] do 
+                value 
+                other_value array: true 
+              end
+            end 
+            result = builder.build do 
+              object :one, :three
+            end
+            expect( result[ :object ][ :value ] ).to eq( :one )
+            expect( result[ :object ][ :other_value ] ).to eq( [:three] )
+          end
+        end
+
+        context 'where both of the values are an array' do 
+          it 'defines and builds the attributes correctly' do
+            builder = described_class.new.define do 
+              object arguments: [ :value, :other_value ] do 
+                value array: true 
+                other_value array: true
+              end
+            end 
+            result = builder.build do 
+              object [:one, :two], [:three, :four] 
+            end
+            expect( result[ :object ][ :value ] ).to eq( [:one, :two] )
+            expect( result[ :object ][ :other_value ] ).to eq( [:three, :four] )
+          end
+        end
+
       end
       
       context 'where the object has arguments for some values' do
