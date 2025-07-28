@@ -98,7 +98,7 @@ module DynamicSchema
     end
 
     def class
-      ::DynamicSchema::Schema::Resolver
+      ::DynamicSchema::Resolver
     end
 
     def is_a?( klass )
