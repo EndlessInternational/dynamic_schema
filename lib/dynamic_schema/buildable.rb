@@ -6,15 +6,15 @@ module DynamicSchema
     end
 
     module ClassMethods
+      [ :build, :build_from_bytes, :build_from_file ].each do | name |
+        define_method( name ) do | *args, **kwargs, &block |
+          new( builder.public_send( name, *args, **kwargs, &block ) )
+        end
 
-      def build( attributes = nil, &block )
-        new( builder.build( attributes, &block ) )
-      end 
-
-      def build!( attributes = nil, &block )
-        new( builder.build!( attributes, &block ) )
-      end 
-
+        define_method( :"#{name}!" ) do | *args, **kwargs, &block |
+          new( builder.public_send( :"#{name}!", *args, **kwargs, &block ) )
+        end
+      end
     end 
 
   end
