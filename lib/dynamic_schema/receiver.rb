@@ -8,6 +8,10 @@ module DynamicSchema
       end
     end
 
+    def self.const_missing( name )
+      ::Object.const_get( name )
+    end
+
     def initialize( values = nil, schema:, converters: )
       raise ArgumentError, 'The Receiver values must be a nil or a Hash.'\
         unless values.nil? || ( values.respond_to?( :[] ) && values.respond_to?( :key? ) )
@@ -33,6 +37,11 @@ module DynamicSchema
       self.instance_eval( &block )
       self
     end
+
+    %i[ String Integer Float Array Hash raise ].each do | method |
+      define_method( method ) { | *args, &block | ::Kernel.public_send( method, *args, &block ) }
+      private method
+    end      
 
     def nil?
       false  

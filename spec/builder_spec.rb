@@ -358,4 +358,29 @@ RSpec.describe DynamicSchema::Builder do
 
   end
 
+  describe 'inherit option' do
+    
+    class ParentForBuilderInherit
+      include DynamicSchema::Definable
+      schema do
+        parent_value String
+      end
+    end
+
+    it 'inherits from an existing schema and adds new properties' do
+      builder = described_class.new.define( inherit: ParentForBuilderInherit.schema ) do
+        child_value Integer
+      end
+
+      result = builder.build do
+        parent_value 'foo'
+        child_value 42
+      end
+
+      expect( result[ :parent_value ] ).to eq( 'foo' )
+      expect( result[ :child_value ] ).to eq( 42 )
+      expect { ParentForBuilderInherit.builder.build { child_value 1 } }.to raise_error( NoMethodError )
+    end
+  end
+
 end

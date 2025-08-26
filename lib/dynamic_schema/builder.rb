@@ -14,8 +14,11 @@ module DynamicSchema
       super()
     end
 
-    def define( &block )
-      self.schema = Resolver.new( self.schema ).resolve( &block )._schema 
+    def define( inherit: nil, &block )
+      resolver = Resolver.new( self.schema )
+      resolver.resolve( &inherit ) if inherit
+      resolver.resolve( &block ) if block
+      self.schema = resolver._schema
       self
     end 
 
