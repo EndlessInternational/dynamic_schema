@@ -1,7 +1,7 @@
 require_relative 'builder_methods/conversion'
 require_relative 'builder_methods/validation'
 require_relative 'resolver'
-require_relative 'receiver'
+require_relative 'receiver/object'
 
 module DynamicSchema
   class Builder 
@@ -23,13 +23,13 @@ module DynamicSchema
     end 
 
     def build( values = nil, &block )
-      receiver = Receiver.new( values, schema: self.schema, converters: self.converters )
+      receiver = Receiver::Object.new( values, schema: self.schema, converters: self.converters )
       receiver.instance_eval( &block ) if block
       receiver.to_h 
     end
 
     def build_from_bytes( bytes, filename: '(schema)', values: nil )
-      receiver = Receiver.new( values, schema: schema, converters: converters )
+      receiver = Receiver::Object.new( values, schema: schema, converters: converters )
       receiver.instance_eval( bytes, filename, 1 )
       receiver.to_h
     end

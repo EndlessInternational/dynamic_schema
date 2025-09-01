@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-RSpec.describe DynamicSchema::Receiver do
+RSpec.describe DynamicSchema::Receiver::Object do
 
   describe 'to_h method' do
 

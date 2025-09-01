@@ -1,16 +1,9 @@
+require_relative 'base'
+require_relative 'value'
+
 module DynamicSchema 
-  class Receiver < BasicObject
-
-    if defined?( ::PP )
-      include ::PP::ObjectMixin 
-      def pretty_print( pp )
-        pp.pp( { values: @values, schema: @schema } )
-      end
-    end
-
-    def self.const_missing( name )
-      ::Object.const_get( name )
-    end
+  module Receiver
+    class Object < Base
 
     def initialize( values = nil, schema:, converters: )
       raise ArgumentError, 'The Receiver values must be a nil or a Hash.'\
@@ -33,20 +26,6 @@ module DynamicSchema
 
     end
 
-    def evaluate( &block )
-      self.instance_eval( &block )
-      self
-    end
-
-    %i[ String Integer Float Array Hash raise ].each do | method |
-      define_method( method ) { | *args, &block | ::Kernel.public_send( method, *args, &block ) }
-      private method
-    end      
-
-    def nil?
-      false  
-    end
-
     def empty?
       @values.empty?
     end
@@ -56,7 +35,7 @@ module DynamicSchema
         case object
         when ::NilClass
           nil
-        when ::DynamicSchema::Receiver
+        when ::DynamicSchema::Receiver::Object
           recursive_to_h.call( object.to_h )
         when ::Hash
           object.transform_values { | value | recursive_to_h.call( value ) }
@@ -70,20 +49,14 @@ module DynamicSchema
       recursive_to_h.call( @values )
     end
 
-    def to_s
-      inspect
-    end
-
-    def inspect
-      { values: @values, schema: @schema }.inspect 
-    end
-
     def class
-      ::DynamicSchema::Receiver
+      ::DynamicSchema::Receiver::Object
     end
 
     def is_a?( klass )
-      klass == ::DynamicSchema::Receiver || klass == ::BasicObject
+      klass == ::DynamicSchema::Receiver::Object || 
+      klass == ::DynamicSchema::Receiver::Base || 
+      klass == ::BasicObject
     end
 
     alias :kind_of? :is_a?
@@ -98,14 +71,14 @@ module DynamicSchema
           if criteria[ :type ] == ::Object 
             value = __object( method, args, value: value, criteria: criteria, &block )
           else 
-            value = __value( method, args, value: value, criteria: criteria )
+            value = __value( method, args, value: value, criteria: criteria, &block )
           end
         else
           value = @defaults_assigned[ method ] ? ::Array.new : value || ::Array.new
           if criteria[ :type ] == ::Object
             value = __object_array( method, args, value: value, criteria: criteria, &block )
           else
-            value = __values_array( method, args, value: value, criteria: criteria )
+            value = __values_array( method, args, value: value, criteria: criteria, &block )
           end
         end
 
@@ -113,8 +86,8 @@ module DynamicSchema
         @values[ name ] = value 
       else
         ::Kernel.raise ::NoMethodError, 
-          "There is no schema value or object '#{method}' defined in this scope which includes: " \
-          "#{@schema.keys.join( ', ' )}." 
+          "There is no schema value or object '#{ method }' defined in this scope which includes: " \
+          "#{ @schema.keys.join( ', ' ) }." 
       end
     end
 
@@ -133,12 +106,12 @@ module DynamicSchema
       required_arguments = [ required_arguments ].flatten if required_arguments
       required_count = required_arguments&.length || 0
       ::Kernel.raise ::ArgumentError, 
-          "The attribute '#{name}' requires #{required_count} arguments " \
-          "(#{required_arguments.join(', ')}) but #{count} was given." \
+          "The attribute '#{ name }' requires #{ required_count } arguments " \
+          "(#{ required_arguments.join( ', ' ) }) but #{ count } was given." \
         if count < required_count 
       ::Kernel.raise ::ArgumentError, 
-          "The attribute '#{name}' should have at most #{required_count + 1} arguments but " \
-          "#{count} was given." \
+          "The attribute '#{ name }' should have at most #{ required_count + 1 } arguments but " \
+          "#{ count } was given." \
         if count > required_count + 1
 
       result = {}
@@ -182,13 +155,14 @@ module DynamicSchema
       result
     end
 
-    def __value( method, arguments, value:, criteria: )
+    def __value( method, arguments, value:, criteria:, &block )
       value = arguments.first
       new_value = criteria[ :type ] ? __coerce_value( criteria[ :type ], value ) : value
-      new_value.nil? ? value : new_value
+      new_value = new_value.nil? ? value : new_value
+      block ? __receive_value_block( new_value, &block ) : new_value
     end
 
-    def __values_array( method, arguments, value:, criteria: )
+    def __values_array( method, arguments, value:, criteria:, &block )
       values = [ arguments.first ].flatten
       if type = criteria[ :type ]
         values = values.map do | v | 
@@ -196,6 +170,7 @@ module DynamicSchema
           new_value.nil? ? v : new_value
         end 
       end
+      values = values.map { | v | __receive_value_block( v, &block ) } if block
       value.concat( values )
     end 
 
@@ -206,7 +181,7 @@ module DynamicSchema
       )
       if value.nil? || attributes&.any?  
         value = 
-          Receiver.new( 
+          Receiver::Object.new( 
             attributes,
             converters: @converters, 
             schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema 
@@ -222,7 +197,7 @@ module DynamicSchema
         required_arguments: criteria[ :arguments ] 
       )
       value.concat( [ attributes ].flatten.map { | a |
-        receiver = Receiver.new( 
+        receiver = Receiver::Object.new( 
           a,
           converters: @converters, 
           schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema 
@@ -232,5 +207,14 @@ module DynamicSchema
       } )
     end
 
+    def __receive_value_block( new_value, &block )
+      target = new_value
+      ::Kernel.raise ::ArgumentError, "A value instance is required when providing a block." if target.nil?
+      proxy = ::DynamicSchema::Receiver::Value.new( target )
+      proxy.instance_eval( &block )
+      target
+    end
+
+  end
   end
 end    

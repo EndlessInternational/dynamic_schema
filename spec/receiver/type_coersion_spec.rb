@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-RSpec.describe DynamicSchema::Receiver do
+RSpec.describe DynamicSchema::Receiver::Object do
   describe 'type coersion' do
 
     it 'coerces string values to Integer when type is Integer' do

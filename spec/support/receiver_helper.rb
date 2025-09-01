@@ -3,7 +3,7 @@ module ReceiverHelper
   DEFAULT_CONVERTERS = DynamicSchema::Builder::DEFAULT_CONVERTERS 
 
   def build_receiver( values = nil, schema: )   
-    DynamicSchema::Receiver.new( 
+    DynamicSchema::Receiver::Object.new( 
       values, 
       converters: DEFAULT_CONVERTERS, 
       schema: schema 
@@ -15,4 +15,3 @@ end
 RSpec.configure do | config |
   config.include ReceiverHelper
 end
-

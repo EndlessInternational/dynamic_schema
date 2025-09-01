@@ -1,6 +1,6 @@
 require 'spec_helper.rb'
 
-RSpec.describe DynamicSchema::Receiver do
+RSpec.describe DynamicSchema::Receiver::Object do
 
   describe 'empty? Method' do
 
