@@ -1,6 +1,6 @@
 require_relative 'builder_methods/conversion'
 require_relative 'builder_methods/validation'
-require_relative 'resolver'
+require_relative 'compiler'
 require_relative 'receiver/object'
 
 module DynamicSchema
@@ -9,33 +9,53 @@ module DynamicSchema
     include BuilderMethods::Validation 
     include BuilderMethods::Conversion 
   
-    def initialize( schema = nil )
-      self.schema = schema 
+    def initialize
+      self.compiled_schema = nil 
+      @schema_blocks = []
       super()
     end
 
     def define( inherit: nil, &block )
-      resolver = Resolver.new( self.schema )
-      resolver.resolve( &inherit ) if inherit
-      resolver.resolve( &block ) if block
-      self.schema = resolver._schema
+      @schema_blocks << inherit if inherit
+      @schema_blocks << block if block
+
+      compiler = Compiler.new( self.compiled_schema )
+      compiler.compile( &inherit ) if inherit
+      compiler.compile( &block ) if block
+      self.compiled_schema = compiler.compiled
       self
     end 
 
+    def schema
+      blocks = @schema_blocks.dup
+      proc do 
+        blocks.each { | block | instance_eval( &block ) }
+      end
+    end
+
     def build( values = nil, &block )
-      receiver = Receiver::Object.new( values, schema: self.schema, converters: self.converters )
+      receiver = Receiver::Object.new( 
+        values, 
+        schema: self.compiled_schema, converters: self.converters 
+      )
       receiver.instance_eval( &block ) if block
       receiver.to_h 
     end
 
     def build_from_bytes( bytes, filename: '(schema)', values: nil )
-      receiver = Receiver::Object.new( values, schema: schema, converters: converters )
+      receiver = Receiver::Object.new( 
+        values, 
+        schema: compiled_schema, converters: converters 
+      )
       receiver.instance_eval( bytes, filename, 1 )
       receiver.to_h
     end
 
     def build_from_file( path, values: nil )
-      self.build_from_bytes( File.read( path, encoding: 'UTF-8' ), filename: path, values: values )
+      self.build_from_bytes( 
+        File.read( path, encoding: 'UTF-8' ), 
+        filename: path, values: values 
+      )
     end
 
     [ :build, :build_from_source, :build_from_file ].each do |name|
@@ -47,7 +67,7 @@ module DynamicSchema
     end
 
   private 
-    attr_accessor :schema
+    attr_accessor :compiled_schema
 
   end
 end

@@ -1,35 +1,34 @@
 require_relative 'receiver/object'
 
 module DynamicSchema
-  class Resolver < BasicObject
+  class Compiler < BasicObject
     
-    def initialize( schema = nil, resolved_blocks: nil )
-      @schema = schema || {}
+    def initialize( compiled_schema = nil, compiled_blocks: nil )
+      @compiled_schema = compiled_schema || {}
       
       @block = nil 
-      @resolved = false 
-      @resolved_blocks = resolved_blocks || []
+      @compiled = false 
+      @compiled_blocks = compiled_blocks || []
     end
 
-    def resolve( &block )
+    def compile( &block )
       @block = block 
-      @resolved = false 
-      unless @resolved_blocks.include?( @block )
-        @resolved_blocks << @block
+      @compiled = false 
+      unless @compiled_blocks.include?( @block )
+        @compiled_blocks << @block
         self.instance_eval( &@block )
-        @resolved = true 
+        @compiled = true 
       end
       self
     end
         
-    def _schema 
-
-      if !@resolved && @block 
-        @resolved_blocks << @block unless @resolved_blocks.include?( @block )
+    def compiled 
+      if !@compiled && @block 
+        @compiled_blocks << @block unless @compiled_blocks.include?( @block )
         self.instance_eval( &@block ) 
-        @resolved = true
+        @compiled = true
       end
-      @schema 
+      @compiled_schema 
     end
 
     def _value( name, options )
@@ -40,7 +39,7 @@ module DynamicSchema
   
       _validate_in!( name, options[ :type ], options[ :in ] ) if options[ :in ] 
       
-      @schema[ name ] = options
+      @compiled_schema[ name ] = options
       self
     end
 
@@ -50,9 +49,9 @@ module DynamicSchema
       ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
         if receiver.method_defined?( name ) || receiver.private_method_defined?( name )
 
-      @schema[ name ] = options.merge( {
+      @compiled_schema[ name ] = options.merge( {
         type: ::Object,
-        resolver: Resolver.new( resolved_blocks: @resolved_blocks ).resolve( &block )
+        compiler: Compiler.new( compiled_blocks: @compiled_blocks ).compile( &block )
       } )    
       self
     end
@@ -62,15 +61,11 @@ module DynamicSchema
       options = nil
       if args.empty?
         options = {}
-      # when called with just options:              name as: :streams
       elsif first.is_a?( ::Hash )
         options = first 
-      # when called with just type:                 name String 
-      #                                             name [ TrueClass, FalseClass ] 
       elsif args.length == 1 && 
             ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) )
         options = { type: first }
-      # when called with just type and options:     name String, default: 'the default'
       elsif args.length == 2 && 
             ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) ) && 
             args[ 1 ].is_a?( ::Hash )
@@ -96,15 +91,15 @@ module DynamicSchema
     end
 
     def inspect
-      { schema: @schema }.inspect 
+      { schema: @compiled_schema }.inspect 
     end
 
     def class
-      ::DynamicSchema::Resolver
+      ::DynamicSchema::Compiler
     end
 
     def is_a?( klass )
-      klass == ::DynamicSchema::Resolver || klass == ::BasicObject
+      klass == ::DynamicSchema::Compiler || klass == ::BasicObject
     end
 
     alias :kind_of? :is_a?
@@ -112,7 +107,7 @@ module DynamicSchema
     if defined?( ::PP )
       include ::PP::ObjectMixin 
       def pretty_print( pp )
-        pp.pp( { schema: @schema } )
+        pp.pp( { schema: @compiled_schema } )
       end
     end      
   

@@ -2,13 +2,13 @@ module DynamicSchema
   module BuilderMethods
     module Validation
 
-      def validate!( values, schema: self.schema )
+      def validate!( values, schema: self.compiled_schema )
         traverse_and_validate_values( values, schema: schema ) { | error | 
           raise error 
         } 
       end
     
-      def validate( values, schema: self.schema )
+      def validate( values, schema: self.compiled_schema )
         errors = []
           traverse_and_validate_values( values, schema: schema ) { | error | 
             errors << error 
@@ -16,7 +16,7 @@ module DynamicSchema
         errors
       end
 
-      def valid?( values, schema: self.schema )
+      def valid?( values, schema: self.compiled_schema )
         traverse_and_validate_values( values, schema: schema ) { 
           return false 
         }
@@ -61,7 +61,7 @@ module DynamicSchema
               if criteria[ :type ] == Object
                 traverse_and_validate_values( 
                   values[ name ],
-                  schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema,
+                  schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled,
                   path: "#{ ( path || '' ) + ( path ? '/' : '' ) + key.to_s }", 
                   &block 
                 )
@@ -80,7 +80,7 @@ module DynamicSchema
                 groups.each do | group |
                   traverse_and_validate_values(
                     group, 
-                    schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema,
+                    schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled,
                     path: "#{ ( path || '' ) + ( path ? '/' : '' ) + key.to_s }", 
                     &block 
                   )

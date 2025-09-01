@@ -5,7 +5,7 @@ require_relative 'dynamic_schema/definable'
 require_relative 'dynamic_schema/buildable'
 
 module DynamicSchema  
-  def self.define( schema = {}, inherit: nil, &block )
-    Builder.new( schema ).define( inherit: inherit, &block )
+  def self.define( inherit: nil, &block )
+    Builder.new.define( inherit: inherit, &block )
   end
 end

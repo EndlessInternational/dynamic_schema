@@ -184,7 +184,7 @@ module DynamicSchema
           Receiver::Object.new( 
             attributes,
             converters: @converters, 
-            schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema 
+            schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled 
           )
       end
       value.instance_eval( &block ) if block
@@ -200,7 +200,7 @@ module DynamicSchema
         receiver = Receiver::Object.new( 
           a,
           converters: @converters, 
-          schema: criteria[ :schema ] ||= criteria[ :resolver ]._schema 
+          schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled 
         )
         receiver.instance_eval( &block ) if block
         receiver
