@@ -34,8 +34,9 @@ module DynamicSchema
 
     def _value( name, options )
       name = name.to_sym
+      receiver = ::DynamicSchema::Receiver::Object
       ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
-        if ::DynamicSchema::Receiver::Object.instance_methods.include?( name )
+        if receiver.method_defined?( name ) || receiver.private_method_defined?( name )
   
       _validate_in!( name, options[ :type ], options[ :in ] ) if options[ :in ] 
       
@@ -45,8 +46,9 @@ module DynamicSchema
 
     def _object( name, options = {}, &block )
       name = name.to_sym
+      receiver = ::DynamicSchema::Receiver::Object
       ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
-        if ::DynamicSchema::Receiver::Object.instance_methods.include?( name )
+        if receiver.method_defined?( name ) || receiver.private_method_defined?( name )
 
       @schema[ name ] = options.merge( {
         type: ::Object,
@@ -124,5 +126,3 @@ module DynamicSchema
 
   end
 end
-
-
