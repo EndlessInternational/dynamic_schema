@@ -1,13 +1,13 @@
 require_relative 'builder_methods/conversion'
-require_relative 'builder_methods/validation'
+require_relative 'validator'
 require_relative 'compiler'
 require_relative 'receiver/object'
 
 module DynamicSchema
   class Builder 
 
-    include BuilderMethods::Validation 
     include BuilderMethods::Conversion 
+    include Validator
   
     def initialize
       self.compiled_schema = nil 
@@ -58,7 +58,7 @@ module DynamicSchema
       )
     end
 
-    [ :build, :build_from_source, :build_from_file ].each do |name|
+    [ :build, :build_from_bytes, :build_from_file ].each do |name|
       define_method( :"#{name}!" ) do |*args, **kwargs, &blk|
         result = public_send(name, *args, **kwargs, &blk)
         validate!(result)
