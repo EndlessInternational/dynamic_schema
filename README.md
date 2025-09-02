@@ -1,6 +1,6 @@
 # DynamicSchema
 
-The **DynamicSchema** gem provides a elegant and expressive way to define a domain-specific 
+The **DynamicSchema** gem provides an elegant and expressive way to define domain-specific 
 language (DSL) schemas, making it effortless to build and validate complex Ruby `Hash` 
 constructs. 
 
@@ -27,7 +27,7 @@ openai_request_schema = DynamicSchema.define do
 end
 ```
 
-And then repetedly use that schema to elegantly build a schema conformant `Hash`:
+And then repeatedly use that schema to elegantly build a schema-conformant `Hash`:
 ```ruby
 request = openai_request_schema.build {
   message :system do 
@@ -103,32 +103,89 @@ require 'dynamic_schema'
 
 ### Defining Schemas with **DynamicSchema**
 
-DynamicSchema permits the caller to define a domain specific language (DSL) schema with *values*, 
-*objects* and related *options*. You can use the `DynamicSchema.define` convenience method, or 
-instantiate `DynamicSchema::Builder`, then call it's `define` method, to prepare a builder.
+DynamicSchema lets you define a DSL made of values, objects, and options, then reuse that DSL to 
+build and validate Ruby Hashes.
 
-In all cases the `define` methods require a block where the names of schema components as well as 
-their options are specified. 
+You start by constructing a `DynamicSchema::Builder`. You can do this by calling: 
+- `DynamicSchema.define { … }` 
+- `DynamicSchema::Builder.new.define { … }` 
 
-Once a schema is defined you may repeatedly use the `Builder` instance to 'build' a Hash of values 
-using the DSL you've defined. The builder has a 'build' method which will construct a Hash without 
-validating the values. If you've specified that a value should be of a specific type and an 
-incompatible type was given that type will be in the Hash with no indication of that violation. 
-Alterativelly, you can call the `build!` method which will validate the Hash, raising an exception
-if any of the schema criteria is violated. 
+In both cases, you pass a block that declares the schema values and objects with their options.
 
-Finally, you can use a builder to validate a given Hash against the schema you've defined using 
-the `validate`, `validate!` and `valid?` `Builder` instance methods.
+```ruby
+schema = DynamicSchema.define do
+  # values with an optional default
+  api_key        String
+  model          String,  default: 'gpt-4o'
+
+  # object with its own values
+  chat_options do
+    max_tokens   Integer, default: 1024
+    temperature  Float,   in: 0..1
+  end
+end
+```
+
+You can then:
+
+```ruby
+# build without validation
+built = schema.build do
+  api_key 'secret'
+  chat_options do
+    temperature 0.7
+  end
+end
+
+# build with validation (raises on first error)
+built_validated = schema.build! do
+  api_key 'secret'
+  chat_options do
+    temperature 0.7
+  end
+end
+
+# validate an existing Hash (no building)
+errors = schema.validate( { api_key: 'secret', chat_options: { temperature: 0.7 } } )
+valid  = schema.valid?( { api_key: 'secret', chat_options: { temperature: 0.7 } } )
+```
+
+#### Inheritance
+
+You can extend an existing schema using the `inherit:` option. Pass a Proc that describes 
+the parent schema—typically from a class that includes `DynamicSchema::Definable` via 
+its `schema` method.
+
+```ruby
+class BaseSettings
+  include DynamicSchema::Definable
+  schema do
+    api_key String, required: true
+  end
+end
+
+# extend the base schema with additional fields
+builder = DynamicSchema.define( inherit: BaseSettings.schema ) do
+  region Symbol, in: %i[us eu apac]
+end
+
+settings = builder.build! do
+  api_key 'secret'
+  region  :us
+end
+```
+
+You can call `build`, `build!`, `validate`, `validate!`, and `valid?` on the builder as needed.
 
 ---
 
 ## Values 
 
-A *value* is the basic building blocks of your schema. Values represent individual settings, 
-options or API paramters that you can define with specific types, defaults, and other options.
+A *value* is a basic building block of your schema. Values represent individual settings,
+options or API parameters that you can define with specific types, defaults, and other options.
 
 When defining a value, you provide the name as though you were calling a Ruby method, with 
-arguments that include an optional type (which can be a `Class`, `Module` or an `Array` of these ) 
+arguments that include an optional type (which can be a `Class`, `Module` or an `Array` of these) 
 as well as a `Hash` of options, all of which are optional: 
 
 `name {type} default: {true|false}, required: {true|false}, array: {true|false}, as: {name}, in: {Array|Range}`
@@ -158,7 +215,7 @@ puts result[:version]     # => "1.0"
   - `api_key` defines a value named `api_key`. Any type can be used to assign the value.
   - `version, String, default: '1.0'` defines a value with a default.
 - building 
-  - `schema.build!` build accepts both a Hash and a block where you can set the values.
+  - `schema.build!` accepts both a Hash and a block where you can set the values.
   - Inside the block, `api_key 'your-api-key'` sets the value of `api_key`.
 - accessing 
   - `result[:api_key]` retrieves the value of `api_key`.
@@ -388,7 +445,7 @@ result = schema.build! do
 end
 ```
 
-### :arguments Option 
+### :arguments Option
 
 The `:arguments` option allows objects to accept arguments when building. Any arguments provided
 must appear when the object is built ( and so are implicitly 'required' ).
@@ -424,7 +481,7 @@ their definition and construction.
 
 ### Definable 
 
-The `Definable` module, when inclued in a class, will add the `schema` and the `builder` class 
+The `Definable` module, when included in a class, will add the `schema` and the `builder` class 
 methods. 
 
 By calling `schema` with a block you can define a schema for that specific class. You may also 
@@ -433,7 +490,7 @@ may be called repeatedly to build up a schema with each call adding to the exist
 ( replacing values and objects of the same name if they appear in subsequent calls ). 
 
 The `schema` method will integrate with a class hierarchy. By including Definable in a base class 
-you can call `schema` to define a schema for that base class and then in subsequent dervied classes
+you can call `schema` to define a schema for that base class and then in subsequent derived classes
 to augment it for those classes. 
 
 The `builder` method will return a memoized builder of the schema defined by calls to the `schema` 
@@ -456,7 +513,7 @@ class DatabaSetting < Setting
     end 
   end 
 
-  def initalize( attributes = {} )
+  def initialize( attributes = {} )
     # validate the attributes 
     self.class.builder.validate!( attributes )
     # retain them for future access 
@@ -468,13 +525,13 @@ end
 
 ### Buildable 
 
-The `Buildable` module can be included in a class, in addition to `Definable` to faciliate 
+The `Buildable` module can be included in a class, in addition to `Definable`, to facilitate 
 building that class using a schema assisted builder pattern. The `Buildable` module adds 
 `build!` and `build` methods to the class which can be used to build that class, with and 
-without validation respectivelly. 
+without validation respectively. 
 
-These methods accept both a hash with attributes that follow the schema, as well as a block 
-that can be used to build the class instance. The attributes and block can be used simultanously. 
+These methods accept both a Hash with attributes that follow the schema, as well as a block 
+that can be used to build the class instance. The attributes and block can be used simultaneously. 
 
 **Important** Note that `Buildable` requires a class method `builder` ( which `Definable` 
 provides ) and an initializer that accepts a `Hash` of attributes.
@@ -488,17 +545,17 @@ class Setting
   end 
 end 
 
-class DatabaSetting < Setting  
+class DatabaseSetting < Setting  
   schema do 
     database do 
-      adapter   Symbol, 
+      adapter   Symbol
       host      String
       port      String 
       name      String 
     end 
   end 
 
-  def initalize( attributes = {} )
+  def initialize( attributes = {} )
     # validate the attributes 
     self.class.builder.validate!( attributes )
     # retain them for the future  
@@ -506,7 +563,7 @@ class DatabaSetting < Setting
   end
 end 
 
-database_settings = DatabaSettings.build! name: 'settings.database' do 
+database_settings = DatabaseSetting.build! name: 'settings.database' do 
   database adapter: :pg do 
     host     "localhost"
     port     "127.0.0.1"
@@ -520,7 +577,7 @@ end
 DynamicSchema provides three different methods for validating Hash structures against your 
 defined schema: `validate!`, `validate`, and `valid?`. 
 
-These methods allow you to verify that your data conforms to your schema's requirements, 
+These methods allow you to verify that your data conforms to your schema requirements, 
 including type constraints, required fields, and value ranges.
 
 ### Validation Rules
@@ -528,13 +585,13 @@ including type constraints, required fields, and value ranges.
 When validating, DynamicSchema checks:
 
 1. **Required Fields**: 
-   Any value or object marked as `required: true` are present.
+   Any value or object marked as `required: true` is present.
 2. **Type Constraints**: 
    Any values match their specified types or can be coerced to the specified type.
 3. **Value Ranges**:
    Any values fall within their specified `:in` constraints.
 4. **Objects**: 
-   Any objects are recursively validates.
+   Any objects are recursively validated.
 5. **Arrays**: 
    Any validation rules are applied to each element when `array: true`
 
@@ -642,7 +699,7 @@ Each error includes helpful context about the validation failure, including the 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at [https://github.com/EndlessInternational/adaptive-schema](https://github.com/EndlessInternational/dynamic-schema).
+Bug reports and pull requests are welcome on GitHub at [https://github.com/EndlessInternational/dynamic_schema](https://github.com/EndlessInternational/dynamic_schema).
 
 ## License
 
