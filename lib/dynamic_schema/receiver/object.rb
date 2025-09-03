@@ -159,7 +159,9 @@ module DynamicSchema
       value = arguments.first
       new_value = criteria[ :type ] ? __coerce_value( criteria[ :type ], value ) : value
       new_value = new_value.nil? ? value : new_value
-      block ? __receive_value_block( new_value, &block ) : new_value
+      block ? 
+        __value_block( method, value: new_value, criteria: criteria, &block ) : 
+        new_value
     end
 
     def __values_array( method, arguments, value:, criteria:, &block )
@@ -170,7 +172,11 @@ module DynamicSchema
           new_value.nil? ? v : new_value
         end 
       end
-      values = values.map { | v | __receive_value_block( v, &block ) } if block
+      if block 
+        values = values.map do | value | 
+          __value_block( method, value: value, criteria: criteria, &block )
+        end
+      end
       value.concat( values )
     end 
 
@@ -207,12 +213,38 @@ module DynamicSchema
       } )
     end
 
-    def __receive_value_block( new_value, &block )
-      target = new_value
-      ::Kernel.raise ::ArgumentError, "A value instance is required when providing a block." if target.nil?
-      proxy = ::DynamicSchema::Receiver::Value.new( target )
-      proxy.instance_eval( &block )
-      target
+    def __value_block( method, value:, criteria:, &block )
+      if value.nil?
+        type = criteria[ :type ]
+        
+        if type.is_a?( ::Array )
+          if type.length == 1
+            type = type.first
+          else
+            ::Kernel.raise ::TypeError, 
+                           "An explicit value for '#{method}' is required when using a block " +
+                           "because multiple types were specified."
+          end
+        end
+
+        case type
+        when ::Class
+          begin
+            value = type.new
+          rescue => error
+            ::Kernel.raise ::TypeError, 
+                           "An explicit value for '#{method}' is required because '#{type}' " + 
+                           "could not be constructed: #{error.message}."
+          end
+        else
+          ::Kernel.raise ::TypeError, 
+                         "An explicit value for '#{method}' is required because '#{type}' is " +
+                         "not a Class."
+        end
+
+      end
+      ::DynamicSchema::Receiver::Value.new( value ).instance_eval( &block )
+      value
     end
 
   end
