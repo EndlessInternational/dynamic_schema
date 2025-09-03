@@ -1,12 +1,10 @@
 module ReceiverHelper
 
-  DEFAULT_CONVERTERS = DynamicSchema::Builder::DEFAULT_CONVERTERS 
-
   def build_receiver( values = nil, schema: )   
     DynamicSchema::Receiver::Object.new( 
       values, 
-      converters: DEFAULT_CONVERTERS, 
-      schema: schema 
+      schema: schema,
+      converter: DynamicSchema::Converter
     )
   end
 

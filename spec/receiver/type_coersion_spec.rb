@@ -130,7 +130,7 @@ RSpec.describe DynamicSchema::Receiver::Object do
       end
 
       builder = DynamicSchema::Builder.new
-      builder.convertor( UpcaseString ) { | v | UpcaseString.new( v ) }
+      builder.register_converter( UpcaseString ) { | v | UpcaseString.new( v ) }
       builder.define {
         name UpcaseString
       }

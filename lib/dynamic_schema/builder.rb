@@ -1,18 +1,14 @@
-require_relative 'builder_methods/conversion'
-require_relative 'validator'
 require_relative 'compiler'
 require_relative 'receiver/object'
 
 module DynamicSchema
   class Builder 
-
-    include BuilderMethods::Conversion 
     include Validator
+    include Converter
   
     def initialize
       self.compiled_schema = nil 
       @schema_blocks = []
-      super()
     end
 
     def define( inherit: nil, &block )
@@ -34,19 +30,13 @@ module DynamicSchema
     end
 
     def build( values = nil, &block )
-      receiver = Receiver::Object.new( 
-        values, 
-        schema: self.compiled_schema, converters: self.converters 
-      )
+      receiver = Receiver::Object.new( values, schema: self.compiled_schema, converter: self )      
       receiver.instance_eval( &block ) if block
       receiver.to_h 
     end
 
     def build_from_bytes( bytes, filename: '(schema)', values: nil )
-      receiver = Receiver::Object.new( 
-        values, 
-        schema: compiled_schema, converters: converters 
-      )
+      receiver = Receiver::Object.new( values, schema: compiled_schema, converter: self )
       receiver.instance_eval( bytes, filename, 1 )
       receiver.to_h
     end

@@ -5,7 +5,7 @@ module DynamicSchema
   module Receiver
     class Object < Base
 
-    def initialize( values = nil, schema:, converters: )
+    def initialize( values = nil, schema:, converter: )
       raise ArgumentError, 'The Receiver values must be a nil or a Hash.'\
         unless values.nil? || ( values.respond_to?( :[] ) && values.respond_to?( :key? ) )
       
@@ -13,7 +13,7 @@ module DynamicSchema
       @schema = schema
       @defaults_assigned = {}
 
-      @converters = converters&.dup 
+      @converter = converter
       
       @schema.each do | key, criteria |
         name = criteria[ :as ] || key 
@@ -147,7 +147,7 @@ module DynamicSchema
 
       if result.nil?
         types.each do | type |
-          result = @converters[ type ].call( value ) rescue nil
+          result = @converter.convert( value, to: type ) rescue nil
           break unless result.nil?
         end
       end
@@ -189,7 +189,7 @@ module DynamicSchema
         value = 
           Receiver::Object.new( 
             attributes,
-            converters: @converters, 
+            converter: @converter, 
             schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled 
           )
       end
@@ -205,7 +205,7 @@ module DynamicSchema
       value.concat( [ attributes ].flatten.map { | a |
         receiver = Receiver::Object.new( 
           a,
-          converters: @converters, 
+          converter: @converter, 
           schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled 
         )
         receiver.instance_eval( &block ) if block
