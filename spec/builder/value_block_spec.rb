@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
-  describe 'value blocks' do
+  context 'value blocks' do
 
     context 'where a class with an attribute accessor is given as a schema value type' do
       

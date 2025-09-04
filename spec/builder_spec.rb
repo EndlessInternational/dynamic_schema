@@ -2,7 +2,7 @@ require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
 
-  describe 'default values' do
+  context 'default values' do
     it 'uses default values when parameters are not provided' do
       builder = described_class.new.define do
         string_param String, default: 'default-string'
@@ -34,7 +34,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'array parameters with different types' do
+  context 'array parameters with different types' do
     it 'handles arrays of Strings' do
       builder = described_class.new.define do
         string_array String, array: true
@@ -111,7 +111,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'nested parameters with various types' do
+  context 'nested parameters with various types' do
     it 'handles nested parameters with different parameter types' do
       builder = described_class.new.define do
         database do
@@ -139,7 +139,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'complex builder with arrays and defaults' do
+  context 'complex builder with arrays and defaults' do
     it 'handles complex builders with arrays of different types and defaults' do
       builder = described_class.new.define do
         api_key String
@@ -171,7 +171,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'type validation with custom error messages' do
+  context 'type validation with custom error messages' do
     it 'provides meaningful error messages when type validation fails' do
       builder = described_class.new.define do
         age Integer
@@ -188,7 +188,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'using the :as option with arrays' do
+  context 'using the :as option with arrays' do
     it 'correctly maps parameter names using :as with array parameters' do
       builder = described_class.new.define do
         tagsList String, as: :tags, array: true
@@ -203,7 +203,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'multiple nested parameters' do
+  context 'multiple nested parameters' do
     it 'handles multiple levels of nested parameters' do
       builder = described_class.new.define do
         level1 do
@@ -235,7 +235,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'edge cases and error handling' do
+  context 'edge cases and error handling' do
     it 'raises an error when required parameter is missing' do
       builder = described_class.new.define do
         required_param String
@@ -262,7 +262,7 @@ RSpec.describe DynamicSchema::Builder do
 
   end
 
-  describe 'parameter aliases using :as option' do
+  context 'parameter aliases using :as option' do
     it 'allows multiple parameters to map to the same internal key' do
       builder = described_class.new.define do
         username String, as: :user
@@ -283,7 +283,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'parameter overriding and precedence' do
+  context 'parameter overriding and precedence' do
     it 'gives precedence to the last parameter set' do
       builder = described_class.new.define do
         param String
@@ -298,7 +298,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'array parameters with default values' do
+  context 'array parameters with default values' do
     it 'uses default array values when none are provided' do
       builder = described_class.new.define do
         roles String, array: true, default: [ 'user', 'admin' ]
@@ -324,7 +324,7 @@ RSpec.describe DynamicSchema::Builder do
     end
   end
 
-  describe 'boolean parameter edge cases' do
+  context 'boolean parameter edge cases' do
     
     it 'accepts true and false correctly' do
       builder = described_class.new.define do
@@ -358,17 +358,17 @@ RSpec.describe DynamicSchema::Builder do
 
   end
 
-  describe 'inherit option' do
-    
-    class ParentForBuilderInherit
-      include DynamicSchema::Definable
-      schema do
-        parent_value String
-      end
-    end
+  context 'inherit option' do
 
     it 'inherits from an existing schema and adds new properties' do
-      builder = described_class.new.define( inherit: ParentForBuilderInherit.schema ) do
+      parent_class = Class.new do
+        include DynamicSchema::Definable
+        schema do
+          parent_value String
+        end
+      end
+
+      builder = described_class.new.define( inherit: parent_class.schema ) do
         child_value Integer
       end
 
@@ -379,7 +379,7 @@ RSpec.describe DynamicSchema::Builder do
 
       expect( result[ :parent_value ] ).to eq( 'foo' )
       expect( result[ :child_value ] ).to eq( 42 )
-      expect { ParentForBuilderInherit.builder.build { child_value 1 } }.to raise_error( NoMethodError )
+      expect { parent_class.builder.build { child_value 1 } }.to raise_error( NoMethodError )
     end
   end
 

@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
-  describe '#validate' do
+  context '#validate' do
 
     context 'with a builder defining a single paramter' do
       context 'with a parameter that includes a :type option' do

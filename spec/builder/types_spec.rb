@@ -2,7 +2,7 @@ require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
 
-  describe 'value attribute types' do
+  context 'value attribute types' do
 
     it 'defines and builds untyped value attributes correctly' do
       builder = described_class.new.define do
@@ -69,7 +69,7 @@ RSpec.describe DynamicSchema::Builder do
     end
 
     it 'defines and builds custom class instance value attributes correctly' do
-      class CustomType
+      custom_type_class = Class.new do
         attr_reader :value
         def initialize( value )
           @value = value
@@ -77,10 +77,10 @@ RSpec.describe DynamicSchema::Builder do
       end
 
       builder = described_class.new.define do
-        custom_param CustomType
+        custom_param custom_type_class
       end
 
-      custom_value = CustomType.new( 'custom' )
+      custom_value = custom_type_class.new( 'custom' )
       result = builder.build! do
         custom_param custom_value
       end
@@ -178,7 +178,7 @@ RSpec.describe DynamicSchema::Builder do
       end
 
       it 'defines and builds custom class instance value attributes correctly' do
-        class CustomType
+        custom_type_class = Class.new do
           attr_reader :value
           def initialize( value )
             @value = value
@@ -187,11 +187,11 @@ RSpec.describe DynamicSchema::Builder do
 
         builder = described_class.new.define do
           object do 
-            custom_param CustomType
+            custom_param custom_type_class
           end
         end
 
-        custom_value = CustomType.new( 'custom' )
+        custom_value = custom_type_class.new( 'custom' )
         result = builder.build! do
           object do 
             custom_param custom_value

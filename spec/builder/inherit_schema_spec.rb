@@ -2,7 +2,7 @@ require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
 
-  describe 'schema reuse and inheritance' do
+  context 'schema reuse and inheritance' do
 
     it 'reuses a builder schema via inherit to create an equivalent builder' do
       base = DynamicSchema.define do

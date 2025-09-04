@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
-  describe 'schema with recursive parameters' do
+  context 'schema with recursive parameters' do
  
     RECURSIVE_PARAMETERS = proc {
       value
@@ -38,4 +38,3 @@ RSpec.describe DynamicSchema::Builder do
 
   end
 end
-

@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe DynamicSchema::Builder do
-  describe 'object attributes with :arguments option' do
+  context 'object attributes with :arguments option' do
 
     context 'where the object has a single value' do
 
