@@ -1,8 +1,8 @@
 module DynamicSchema
   class Struct
 
-    # included into all generated struct classes
-    module Class; end
+    # base class for all generated struct classes
+    class Class; end
 
     class << self
 
@@ -14,7 +14,7 @@ module DynamicSchema
       def new( schema, &block )
         __compiled_schema = __compile_schema( schema )
 
-        klass = ::Class.new do
+        klass = ::Class.new( ::DynamicSchema::Struct::Class ) do
           class << self
             def build( attributes = {}, &block )
               struct = new( attributes )
@@ -32,7 +32,12 @@ module DynamicSchema
           end
 
           def initialize( attributes = nil )
-            @attributes = attributes&.dup
+            @attributes = attributes&.dup || {}
+            @coerced_attributes = {}
+          end
+
+          def []( key )
+            @coerced_attributes[ key ] || @attributes[ key ]
           end
 
           def to_h
@@ -63,28 +68,36 @@ module DynamicSchema
             type = criteria[ :type ]
             if type == ::Object
               define_method( property_name ) do
-                value = @attributes[ property_name ]
-                schema = criteria[ :schema ] ||= ( criteria[ :compiler ]&.compiled )
-                return value unless schema
-                klass = criteria[ :class ] || ::DynamicSchema::Struct.new( schema )
-                if criteria[ :array ]
-                  Array( value ).map { | v | klass.build( v || {} ) }
-                else
-                  klass.build( value || {} )
+                @coerced_attributes.fetch( property_name ) do
+                  value = @attributes[ property_name ]
+                  schema = criteria[ :schema ] ||= ( criteria[ :compiler ]&.compiled )
+                  return value unless schema
+                  klass = criteria[ :class ] || ::DynamicSchema::Struct.new( schema )
+                  @coerced_attributes[ property_name ] = 
+                    if criteria[ :array ]
+                      Array( value ).map { | v | klass.build( v || {} ) }
+                    else
+                      klass.build( value || {} )
+                    end
                 end
               end
             elsif type
               define_method( property_name ) do 
-                value = @attributes[ property_name ]
-                criteria[ :array ] ? 
-                  Array( value ).map { | v | __coerce( v, to: type ) } : 
-                  __coerce( value, to: type )
+                @coerced_attributes.fetch( property_name ) do 
+                  value = @attributes[ property_name ]
+                  @coerced_attributes[ property_name ] = criteria[ :array ] ? 
+                    Array( value ).map { | v | __coerce( v, to: type ) } : 
+                    __coerce( value, to: type )
+                end
               end
             else
-              define_method( property_name ) { @attributes[ property_name ] } 
+              define_method( property_name ) do 
+                @attributes[ property_name ]
+              end 
             end
 
             define_method( :"#{ property_name }=" ) do | value | 
+              @coerced_attributes.delete( property_name )
               @attributes[ property_name ] = value 
             end
           end
@@ -124,7 +137,7 @@ module DynamicSchema
 
         end
 
-        klass.include( ::DynamicSchema::Struct::Class )
+        # klass.include( ::DynamicSchema::Struct::Class )
 
         klass.instance_variable_set( :@compiled_schema, __compiled_schema )
         klass.class_eval( &block ) if block
