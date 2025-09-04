@@ -60,6 +60,7 @@ You can find a full OpenAI request example in the `/examples` folder of this rep
 - [Class Schema](#class-schemas)
   - [Definable](#definable) 
   - [Buildable](#buildable) 
+- [Struct](#struct)
 - [Validation Methods](#validation-methods)
   - [Validation Rules](#validation-rules) 
   - [validate!](#validate)
@@ -176,6 +177,108 @@ end
 ```
 
 You can call `build`, `build!`, `validate`, `validate!`, and `valid?` on the builder as needed.
+
+---
+
+## Struct
+
+In addition to building plain Ruby `Hash` values, DynamicSchema can generate lightweight
+Ruby classes from a schema. A `DynamicSchema::Struct` exposes readers and writers for the
+fields you define, and transparently wraps nested objects so that you can access them with
+dot-style accessors rather than deep hash indexing.
+
+You create a struct class by passing the same schema shape you would give to a Builder. The
+schema can be provided as:
+
+- a `Proc` that defines the schema
+- a `DynamicSchema::Builder`
+- a compiled `Hash` (advanced)
+
+```ruby
+require 'dynamic_schema'
+
+# simple struct with typed fields
+Person = DynamicSchema::Struct.define do
+  full_name String
+  age       Integer
+end
+
+person = Person.build( full_name: 'Sam Lee', age: '42' )
+person.age          # => 42 (coerced using the same converters as Builder)
+person.full_name = 'Samira Lee'
+person.to_h         # => { full_name: 'Samira Lee', age: 42 }
+
+# nested object with its own accessors
+Company = DynamicSchema::Struct.define do
+  employee do
+    full_name String
+    years_of_service Integer
+  end
+end
+
+acme = Company.build( employee: { full_name: 'Alex', years_of_service: 5 } )
+acme.employee.full_name        # => 'Alex'
+acme.employee.years_of_service # => 5
+
+# array of nested objects
+Order = DynamicSchema::Struct.define do
+  items array: true do
+    name  String
+    price Integer
+  end
+end
+
+order = Order.build( items: [ { name: 'Desk', price: 100 }, { name: 'Chair', price: 50 } ] )
+order.items.map { | i | i.name }   # => [ 'Desk', 'Chair' ]
+
+# referencing another struct class
+OrderItem = DynamicSchema::Struct.define do
+  name     String
+  quantity Integer
+end
+
+OrderCollection = DynamicSchema::Struct.define do
+  order_number String
+  line_items   OrderItem, array: true
+end
+
+collection = OrderCollection.new( {
+  order_number: 'A-100',
+  line_items: [ { name: 'Desk', quantity: 1 }, { name: 'Chair', quantity: 2 } ]
+} )
+collection.line_items[ 0 ].name     # => 'Desk'
+collection.line_items[ 1 ].quantity # => 2
+```
+
+- defining
+  - `DynamicSchema::Struct.define` takes a block that looks exactly like a Builder schema.
+  - Use `array: true` to expose arrays of nested structs.
+  - You may reference another struct class as a value type; arrays of that type expose
+    nested accessors for each element.
+- building
+  - `StructClass.build( attributes )` constructs an instance and (optionally) coerces typed
+    scalar fields using the same converters as the Builder.
+  - `StructClass.build!` additionally validates the instance just like `builder.build!`.
+- accessing
+  - Use standard Ruby readers/writers: `instance.attribute`, `instance.attribute = value`.
+  - `#to_h` returns a deep Hash of the current values (nested structs become hashes).
+
+You can also create a struct class from a builder or a compiled hash if you already have a
+schema elsewhere:
+
+```ruby
+builder = DynamicSchema.define do
+  name String
+end
+
+NameStruct = DynamicSchema::Struct.new( builder )
+NameStruct.build( name: 'Taylor' ).name  # => 'Taylor'
+```
+
+- validation
+  - struct instances include the same validation helpers as hashes built via a builder.
+  - `StructClass.build!` validates immediately and raises on the first error.
+  - instances respond to `#validate!`, `#validate`, and `#valid?` using the compiled schema.
 
 ---
 
