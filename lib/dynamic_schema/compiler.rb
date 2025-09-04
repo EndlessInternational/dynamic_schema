@@ -78,9 +78,9 @@ module DynamicSchema
       end
 
       type = options[ :type ]
-      if type == ::Object || type.nil? && block 
+      if type == ::Object || ( type.nil? && block )
         _object( method, options, &block )
-      else 
+      else
         _value( method, options )
       end
     
