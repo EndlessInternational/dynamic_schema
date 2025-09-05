@@ -10,15 +10,18 @@ RSpec.describe DynamicSchema::Struct do
           product_class = described_class.define do
             name String
             quantity Integer
+            in_stock [ TrueClass, FalseClass ], default: false
           end
 
-          product = product_class.build( name: 'Desk', quantity: 1 )
+          product = product_class.build( name: 'Desk', quantity: 1, in_stock: true )
           expect( product.name ).to eq( 'Desk' )
           expect( product.quantity ).to eq( 1 )
+          expect( product.in_stock ).to eq( true )
 
+          product = product_class.build
           product.name = 'Chair'
           product.quantity = 2
-          expect( product.to_h ).to include( name: 'Chair', quantity: 2 )
+          expect( product.to_h ).to include( name: 'Chair', quantity: 2, in_stock: false )
 
           expect {
             product_class.build!( name: 'Valid', quantity: 'not-an-integer' )
@@ -63,16 +66,16 @@ RSpec.describe DynamicSchema::Struct do
     context 'where an attribute is defined with an alias' do
       it 'exposes only the alias and maps the value accordingly' do
         document_class = described_class.define do
-          original_title String, as: :title
+          title String, as: :original_title
         end
 
-        doc = document_class.build( title: 'Quarterly Report' )
+        doc = document_class.build( original_title: 'Quarterly Report' )
         expect( doc.title ).to eq( 'Quarterly Report' )
         expect( doc.respond_to?( :original_title ) ).to be false
 
         doc.title = 'Annual Report'
         expect( doc.title ).to eq( 'Annual Report' )
-        expect( doc.to_h ).to include( title: 'Annual Report' )
+        expect( doc.to_h ).to include( original_title: 'Annual Report' )
       end
     end
   end
