@@ -42,8 +42,8 @@ module DynamicSchema
 
     def traverse_and_validate_values( values, schema:, path: nil, options: nil, &block )
       path.chomp( '/' ) if path
-      unless values.is_a?( Hash )
-        raise ArgumentError, "The values must always be a Hash."
+      unless values.respond_to?( :[] )
+        raise ArgumentError, "The values must respond_to `[]`."
       end
 
       schema.each do | key, criteria |
