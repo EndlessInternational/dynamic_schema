@@ -3,7 +3,7 @@ module DynamicSchema
     include Validator
     class << self
 
-       def define( inherit: nil, &block )
+      def define( inherit: nil, &block )
         builder = ::DynamicSchema.define( inherit: inherit, &block )
         new( builder.schema )
       end
@@ -51,7 +51,7 @@ module DynamicSchema
                     value = @attributes[ key ]
                     schema = criteria[ :schema ] ||= ( criteria[ :compiler ]&.compiled )
                     return value unless schema
-                    klass = criteria[ :class ] || ::DynamicSchema::Struct.new( schema )
+                    klass = criteria[ :class ] ||= ::DynamicSchema::Struct.new( schema )
                     @converted_attributes[ key ] = 
                       if criteria[ :array ]
                         Array( value || default ).map { | v | klass.build( v || {} ) }
@@ -70,7 +70,7 @@ module DynamicSchema
                   end
                 end
               else
-                define_method( property ) do 
+                define_method( property ) do
                   @attributes[ key ] || default
                 end 
               end
