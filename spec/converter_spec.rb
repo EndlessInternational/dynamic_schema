@@ -5,13 +5,55 @@ RSpec.describe DynamicSchema::Converter do
     it 'converts strings to Integer' do
       expect( described_class.convert( '42', to: Integer ) ).to eq( 42 )
       expect( described_class.convert( 'x', to: Integer ) ).to be_nil
-      expect( described_class.convert!( 'x', to: Integer ) ).to be_nil
+    end
+
+    it 'converts using an array of boolean types (TrueClass, FalseClass)' do
+      expect( described_class.convert( 'true',  to: [ TrueClass, FalseClass ] ) ).to eq( true )
+      expect( described_class.convert( 'false', to: [ TrueClass, FalseClass ] ) ).to eq( false )
+
+      expect( described_class.convert( 'yes',   to: [ TrueClass, FalseClass ] ) ).to eq( true )
+      expect( described_class.convert( 'no',    to: [ TrueClass, FalseClass ] ) ).to eq( false )
+
+      expect( described_class.convert( 1,       to: [ TrueClass, FalseClass ] ) ).to eq( true )
+      expect( described_class.convert( 0,       to: [ TrueClass, FalseClass ] ) ).to eq( false )
+
+      # non-coercible
+      expect( described_class.convert( 'x',     to: [ TrueClass, FalseClass ] ) ).to be_nil
+    end
+
+    it 'tries types in order and returns the first successful conversion' do
+      # Integer will fail to parse "3.0", but Float succeeds
+      expect( described_class.convert( '3.0', to: [ Integer, Float ] ) ).to eq( 3.0 )
+
+      # Integer succeeds immediately, so Float is not attempted
+      expect( described_class.convert( '7', to: [ Integer, Float ] ) ).to eq( 7 )
+    end
+
+    it 'chooses Float when ordered before Integer for decimal strings' do
+      expect( described_class.convert( '1.23', to: [ Float, Integer ] ) ).to eq( 1.23 )
+    end
+
+    it 'chooses Float when Integer fails for decimal strings even if Integer is first' do
+      # Integer('1.23') fails, then Float succeeds
+      expect( described_class.convert( '1.23', to: [ Integer, Float ] ) ).to eq( 1.23 )
+    end
+
+    it 'returns the value as-is when it already matches any of the types' do
+      # value is already TrueClass, matched on the second type
+      expect( described_class.convert( true, to: [ FalseClass, TrueClass ] ) ).to eq( true )
+
+      # Strings remain strings if String is among the target types
+      expect( described_class.convert( '42', to: [ String, Integer ] ) ).to eq( '42' )
+    end
+
+    it 'yields the block fallback when none of the types match' do
+      result = described_class.convert( 'x', to: [ Integer, Float ] ) { | v | v.to_s }
+      expect( result ).to eq( 'x' )
     end
 
     it 'converts strings to Float' do
       expect( described_class.convert( '3.14', to: Float ) ).to eq( 3.14 )
       expect( described_class.convert( 'x', to: Float ) ).to be_nil
-      expect( described_class.convert!( 'x', to: Float ) ).to be_nil
     end
 
     it 'converts strings to Date and Time' do
@@ -50,7 +92,7 @@ RSpec.describe DynamicSchema::Converter do
     it 'converts to Array (including nil -> [])' do
       expect( described_class.convert( 1, to: Array ) ).to eq( [ 1 ] )
       expect( described_class.convert( [ 1, 2 ], to: Array ) ).to eq( [ 1, 2 ] )
-      expect( described_class.convert( nil, to: Array ) ).to eq( [] )
+      expect( described_class.convert( nil, to: Array ) ).to eq( nil )
     end
 
     it 'returns nil when no converter exists, but yields block fallback' do
@@ -71,7 +113,7 @@ RSpec.describe DynamicSchema::Converter do
       expect( obj ).to be_a( custom )
       expect( obj.value ).to eq( 'HELLO' )
       # ensure convert! also works
-      obj2 = described_class.convert!( 'hi', to: custom )
+      obj2 = described_class.convert( 'hi', to: custom )
       expect( obj2.value ).to eq( 'HI' )
     end
   end

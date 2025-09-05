@@ -11,27 +11,30 @@ module DynamicSchema
       self.converters[ klass ] = block 
     end
 
-    def convert!( value, to:, &block )
-      converter = converters[ to ]
-      if converter
-        begin
-          converter.call( value ) 
-        rescue
-          nil
-        end
-      elsif block
-        block.call( value )
-      else
-        nil
-      end
-    end
-
     def convert( value, to:, &block )
-      begin
-        convert!( value, to: to, &block )
-      rescue
-        nil
+      return value if value.nil? || to.nil?
+
+      to = Array( to )
+      result = nil 
+
+      if value.respond_to?( :is_a? )
+        to.each do | type |
+          result = value.is_a?( type ) ? value : nil  
+          break unless result.nil?
+        end
       end
+
+      if result.nil?
+        to.each do | type |
+          converter = converters[ type ]
+          if converter
+            result = converter.call( value ) rescue nil 
+            break unless result.nil?
+          end
+        end
+      end
+
+      result.nil? && block ? block.call( value ) : result
     end
 
   private
