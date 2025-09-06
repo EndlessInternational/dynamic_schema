@@ -1,7 +1,7 @@
 Gem::Specification.new do | spec |
 
   spec.name           = 'dynamicschema'
-  spec.version        = '1.0.1'
+  spec.version        = '2.0.0'
   spec.authors        = [ 'Kristoph Cichocki-Romanov' ]
   spec.email          = [ 'rubygems.org@kristoph.net' ]
 
@@ -19,6 +19,11 @@ Gem::Specification.new do | spec |
     and validations. By allowing default values, type constraints, nested schemas, and 
     transformations, DynamicSchema ensures that your data structures are both robust and 
     flexible.  
+
+    New in 2.0, DynamicSchema adds DynamicSchema::Struct which faciliates effortless definition
+    and construction of complex object hierarchies, with optional type coersion and validation.
+    Where DynamicSchema simplified configuration and API payload construction, 
+    DynamicSchema::Struct simplifies construction of complex API reponses.
   TEXT
 
   spec.license        = 'MIT'
