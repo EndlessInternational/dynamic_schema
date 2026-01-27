@@ -38,7 +38,7 @@ Gem::Specification.new do | spec |
   spec.files         = Dir[ "lib/**/*.rb", "LICENSE", "README.md", "dynamicschema.gemspec" ]
   spec.require_paths = [ "lib" ]
 
-  spec.add_development_dependency 'rspec', '~> 3.13'
+  spec.add_development_dependency 'minitest', '~> 6.0'
   spec.add_development_dependency 'debug', '~> 1.9'
 
 end

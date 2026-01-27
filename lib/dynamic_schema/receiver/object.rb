@@ -136,12 +136,12 @@ module DynamicSchema
       def __coerce_value( types, value )
         return value unless types && !value.nil?
 
-        types = ::Kernel.method( :Array ).call( types ) 
+        types = ::Kernel.method( :Array ).call( types )
         result = nil
 
         if value.respond_to?( :is_a? )
           types.each do | type |
-            result = value.is_a?( type ) ? value : nil 
+            result = value.is_a?( type ) ? value : nil
             break unless result.nil?
           end
         end

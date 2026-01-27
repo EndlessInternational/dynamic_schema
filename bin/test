@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+
+# run all tests in the test directory
+test_files = Dir.glob( File.expand_path( '../test/**/*_test.rb', __dir__ ) )
+
+test_files.each do | file |
+  require file
+end
