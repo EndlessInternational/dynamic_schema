@@ -29,22 +29,28 @@ module DynamicSchema
       end
     end
 
-    def build( values = nil, &block )
-      receiver = Receiver::Object.new( values, schema: self.compiled_schema, converter: self )      
+    def build( values = nil, defaults: true, &block )
+      receiver = Receiver::Object.new( values, 
+                                       schema: self.compiled_schema, 
+                                       converter: self, 
+                                       defaults: defaults )      
       receiver.instance_eval( &block ) if block
       receiver.to_h 
     end
 
-    def build_from_bytes( bytes, filename: '(schema)', values: nil )
-      receiver = Receiver::Object.new( values, schema: compiled_schema, converter: self )
+    def build_from_bytes( bytes, filename: '(schema)', values: nil, defaults: true )
+      receiver = Receiver::Object.new( values, 
+                                       schema: compiled_schema, 
+                                       converter: self, 
+                                       defaults: defaults )
       receiver.instance_eval( bytes, filename, 1 )
       receiver.to_h
     end
 
-    def build_from_file( path, values: nil )
+    def build_from_file( path, values: nil, defaults: true )
       self.build_from_bytes( 
         File.read( path, encoding: 'UTF-8' ), 
-        filename: path, values: values 
+        filename: path, values: values, defaults: defaults
       )
     end
 

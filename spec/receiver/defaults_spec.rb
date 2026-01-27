@@ -65,6 +65,17 @@ RSpec.describe DynamicSchema::Receiver::Object do
         end
       end
 
+      context 'and defaults are disabled' do
+        it 'does not assign the default value' do
+          receiver = build_receiver( schema: schema, defaults: false )
+          receiver.message { text 'text' }
+
+          result = receiver.to_h
+          expect( result[ :message ][ :role ] ).to eq( nil )
+          expect( result[ :message ][ :text ] ).to eq( 'text' )
+        end
+      end
+
     end
 
     context 'when a default option is set for parameters member' do 
@@ -103,6 +114,17 @@ RSpec.describe DynamicSchema::Receiver::Object do
             expect( result[ :message ][ :text ] ).to eq 'text'
           end
         end
+
+        context 'and defaults are disabled' do
+          it 'does not assign the default value' do
+            receiver = build_receiver( schema: schema, defaults: false )
+            receiver.message { text 'text' }
+
+            result = receiver.to_h
+            expect( result[ :message ][ :role ] ).to eq( nil )
+            expect( result[ :message ][ :text ] ).to eq( 'text' )
+          end
+        end
       end
 
       context 'and the parameters do not have a default' do 
@@ -138,6 +160,15 @@ RSpec.describe DynamicSchema::Receiver::Object do
             result = receiver.to_h
             expect( result[ :message ][ :role ] ).to eq :system
             expect( result[ :message ][ :text ] ).to eq 'text'
+          end
+        end
+
+        context 'and defaults are disabled' do
+          it 'does not assign the default value' do
+            receiver = build_receiver( schema: schema, defaults: false )
+
+            result = receiver.to_h
+            expect( result[ :message ] ).to be_nil
           end
         end
 
