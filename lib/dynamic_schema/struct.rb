@@ -47,47 +47,56 @@ module DynamicSchema
               has_multiple_types = type.is_a?( ::Array ) && criteria[ :compiler ]
 
               if has_multiple_types
+                _criteria = criteria
                 define_method( property ) do
                   @converted_attributes.fetch( key ) do
                     value = @attributes[ key ]
                     value = default if value.nil?
-                    schema = criteria[ :schema ] ||= ( criteria[ :compiler ]&.compiled )
-                    klass = criteria[ :class ] ||= ( schema ? ::DynamicSchema::Struct.new( schema ) : nil )
+                    schema = _criteria[ :schema ] ||= ( _criteria[ :compiler ]&.compiled )
+                    klass = _criteria[ :class ] ||= ( schema ? ::DynamicSchema::Struct.new( schema ) : nil )
                     @converted_attributes[ key ] =
-                      if criteria[ :array ]
-                        __convert_types_array( Array( value ), klass, criteria )
+                      if _criteria[ :array ]
+                        __convert_types_array( Array( value ), klass, _criteria )
                       else
-                        __convert_types( value, klass, criteria )
+                        __normalize( __convert_types( value, klass, _criteria ), _criteria )
                       end
                   end
                 end
               elsif type == ::Object
+                _criteria = criteria
                 define_method( property ) do
                   @converted_attributes.fetch( key ) do
                     value = @attributes[ key ]
-                    schema = criteria[ :schema ] ||= ( criteria[ :compiler ]&.compiled )
+                    schema = _criteria[ :schema ] ||= ( _criteria[ :compiler ]&.compiled )
                     return value unless schema
-                    klass = criteria[ :class ] ||= ::DynamicSchema::Struct.new( schema )
+                    klass = _criteria[ :class ] ||= ::DynamicSchema::Struct.new( schema )
                     @converted_attributes[ key ] =
-                      if criteria[ :array ]
-                        Array( value || default ).map { | v | klass.build( v || {} ) }
+                      if _criteria[ :array ]
+                        Array( value || default ).map { | v | __normalize( klass.build( v || {} ), _criteria ) }
                       else
-                        klass.build( value || default )
+                        __normalize( klass.build( value || default ), _criteria )
                       end
                   end
                 end
               elsif type
+                _criteria = criteria
                 define_method( property ) do
                   @converted_attributes.fetch( key ) do
                     value = @attributes[ key ]
-                    @converted_attributes[ key ] = criteria[ :array ] ?
-                      Array( value || default ).map { | v | __convert( v, to: type ) } :
-                      __convert( value || default, to: type )
+                    @converted_attributes[ key ] = _criteria[ :array ] ?
+                      Array( value || default ).map { | v | __normalize( __coerce( v, to: type ), _criteria ) } :
+                      __normalize( __coerce( value || default, to: type ), _criteria )
                   end
                 end
               else
+                _criteria = criteria
                 define_method( property ) do
-                  @attributes[ key ] || default
+                  value = @attributes[ key ] || default
+                  if _criteria[ :array ]
+                    Array( value ).map { | v | __normalize( v, _criteria ) }
+                  else
+                    __normalize( value, _criteria )
+                  end
                 end
               end
 
@@ -135,7 +144,7 @@ module DynamicSchema
               end
             end
 
-            def __convert( value, to: )
+            def __coerce( value, to: )
               self.class.converter.convert( value, to: to ) { | v | to.new( v ) rescue nil }
             end
 
@@ -145,18 +154,24 @@ module DynamicSchema
                 klass ? klass.build( value ) : value
               else
                 scalar_types = __non_object_types( criteria[ :type ] )
-                __convert( value, to: scalar_types )
+                __coerce( value, to: scalar_types )
               end
             end
 
             def __convert_types_array( values, klass, criteria )
-              values.map { | v | __convert_types( v, klass, criteria ) }
+              values.map { | v | __normalize( __convert_types( v, klass, criteria ), criteria ) }
             end
 
             def __non_object_types( types )
               types_array = types.is_a?( ::Array ) ? types : [ types ]
               result = types_array.reject { | type | type == ::Object }
               result.length == 1 ? result.first : result
+            end
+
+            def __normalize( value, criteria )
+              normalize = criteria[ :normalize ]
+              return value unless normalize && !value.nil?
+              normalize.call( value )
             end
 
           end

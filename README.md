@@ -55,6 +55,7 @@ You can find a full OpenAI request example in the `/examples` folder of this rep
   - [as Option](#as-option)
   - [in Option (Values Only)](#in-option)
   - [arguments Option](#arguments-option)
+  - [normalize Option](#normalize-option)
 - [Class Schema](#class-schemas)
   - [Definable](#definable)
   - [Buildable](#buildable)
@@ -716,6 +717,91 @@ result = schema.build! do
     content "Hello!"
   end
 end
+```
+
+### :normalize Option
+
+The `:normalize` option allows you to transform values immediately upon assignment. It accepts a lambda or Proc that receives the value and returns the transformed result. When used with arrays, the normalizer is called for each individual item, not the array itself.
+
+#### example:
+
+```ruby
+schema = DynamicSchema.define do
+  name String, normalize: ->( v ) { v.strip.downcase }
+  tags String, array: true, normalize: ->( v ) { v.upcase }
+  score Integer, normalize: ->( v ) { v.clamp( 0, 100 ) }
+end
+
+result = schema.build! do
+  name '  Alice  '
+  tags [ 'important', 'urgent' ]
+  score 150
+end
+
+puts result[:name]   # => "alice"
+puts result[:tags]   # => ["IMPORTANT", "URGENT"]
+puts result[:score]  # => 100
+```
+
+The normalizer is applied after type coercion, so you receive the properly typed value:
+
+```ruby
+schema = DynamicSchema.define do
+  count Integer, normalize: ->( v ) { v * 2 }
+end
+
+result = schema.build! do
+  count '5'  # coerced to Integer first, then normalized
+end
+
+puts result[:count]  # => 10
+```
+
+You can also use normalize with objects to transform the entire nested structure:
+
+```ruby
+CustomUser = Struct.new( :name, :email )
+
+schema = DynamicSchema.define do
+  user normalize: ->( v ) { CustomUser.new( v.to_h[:name], v.to_h[:email] ) } do
+    name String
+    email String
+  end
+end
+
+result = schema.build! do
+  user do
+    name 'Alice'
+    email 'alice@example.com'
+  end
+end
+
+result[:user].class  # => CustomUser
+result[:user].name   # => "Alice"
+```
+
+The normalize option works with Struct as well:
+
+```ruby
+Person = DynamicSchema::Struct.define do
+  name String, normalize: ->( v ) { v.strip.capitalize }
+  tags String, array: true, normalize: ->( v ) { v.downcase }
+end
+
+person = Person.build( name: '  alice  ', tags: [ 'ADMIN', 'USER' ] )
+person.name  # => "Alice"
+person.tags  # => ["admin", "user"]
+```
+
+Note that any exceptions raised within a normalize lambda are not captured and will propagate to the caller:
+
+```ruby
+schema = DynamicSchema.define do
+  value Integer, normalize: ->( v ) { raise "invalid value" if v < 0; v }
+end
+
+# This will raise RuntimeError: "invalid value"
+schema.build! { value -1 }
 ```
 
 ## Class Schemas

@@ -167,43 +167,45 @@ module DynamicSchema
         value = arguments.first
         new_value = criteria[ :type ] ? __coerce_value( criteria[ :type ], value ) : value
         new_value = new_value.nil? ? value : new_value
-        block ? 
-          __value_block( method, value: new_value, criteria: criteria, &block ) : 
+        new_value = block ?
+          __value_block( method, value: new_value, criteria: criteria, &block ) :
           new_value
+        __normalize( new_value, criteria )
       end
 
       def __values_array( method, arguments, value:, criteria:, &block )
         values = [ arguments.first ].flatten
         if type = criteria[ :type ]
-          values = values.map do | v | 
+          values = values.map do | v |
             new_value = __coerce_value( type, v )
             new_value.nil? ? v : new_value
-          end 
+          end
         end
-        if block 
-          values = values.map do | value | 
+        if block
+          values = values.map do | value |
             __value_block( method, value: value, criteria: criteria, &block )
           end
         end
+        values = values.map { | v | __normalize( v, criteria ) }
         value.concat( values )
       end 
 
       def __object( method, arguments, value:, criteria:, &block )
-        attributes = __process_arguments( 
-          method, arguments, 
-          required_arguments: criteria[ :arguments ] 
+        attributes = __process_arguments(
+          method, arguments,
+          required_arguments: criteria[ :arguments ]
         )
-        if value.nil? || attributes&.any?  
-          value = 
-            Receiver::Object.new( 
+        if value.nil? || attributes&.any?
+          value =
+            Receiver::Object.new(
               attributes,
-              converter: @converter, 
+              converter: @converter,
               schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled,
               defaults: @defaults
             )
         end
         value.instance_eval( &block ) if block
-        value 
+        __normalize( value, criteria )
       end
 
       def __object_array( method, arguments, value:, criteria:, &block )
@@ -219,7 +221,7 @@ module DynamicSchema
             defaults: @defaults
           )
           receiver.instance_eval( &block ) if block
-          receiver
+          __normalize( receiver, criteria )
         } )
       end
 
@@ -294,6 +296,12 @@ module DynamicSchema
         end
         ::DynamicSchema::Receiver::Value.new( value ).instance_eval( &block )
         value
+      end
+
+      def __normalize( value, criteria )
+        normalize = criteria[ :normalize ]
+        return value unless normalize && !value.nil?
+        normalize.call( value )
       end
 
     end
