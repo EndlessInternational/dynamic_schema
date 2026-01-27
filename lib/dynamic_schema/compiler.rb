@@ -49,10 +49,12 @@ module DynamicSchema
       ::Kernel.raise ::NameError, "The name '#{name}' is reserved and cannot be used for parameters." \
         if receiver.method_defined?( name ) || receiver.private_method_defined?( name )
 
+      type = options[ :type ]
+      options[ :type ] = ::Object unless type.is_a?( ::Array )
+
       @compiled_schema[ name ] = options.merge( {
-        type: ::Object,
         compiler: Compiler.new( compiled_blocks: @compiled_blocks ).compile( &block )
-      } )    
+      } )
       self
     end
 
@@ -62,28 +64,31 @@ module DynamicSchema
       if args.empty?
         options = {}
       elsif first.is_a?( ::Hash )
-        options = first 
-      elsif args.length == 1 && 
+        options = first
+      elsif args.length == 1 &&
             ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) )
         options = { type: first }
-      elsif args.length == 2 && 
-            ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) ) && 
+      elsif args.length == 2 &&
+            ( first.is_a?( ::Class ) || first.is_a?( ::Module ) || first.is_a?( ::Array ) ) &&
             args[ 1 ].is_a?( ::Hash )
         options = args[ 1 ]
         options[ :type ] = args[ 0 ]
       else
         ::Kernel.raise \
-          ::ArgumentError, 
+          ::ArgumentError,
           "A schema definition may only include the type (Class or Module) followed by options (Hash). "
       end
 
       type = options[ :type ]
-      if type == ::Object || ( type.nil? && block )
+
+      if type.is_a?( ::Array ) && block
+        _object( method, options, &block )
+      elsif type == ::Object || ( type.nil? && block )
         _object( method, options, &block )
       else
         _value( method, options )
       end
-    
+
     end
 
     def to_s

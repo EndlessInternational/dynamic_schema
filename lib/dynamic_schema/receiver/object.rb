@@ -68,15 +68,22 @@ module DynamicSchema
           name = criteria[ :as ] || method
           value = @values[ name ]
 
-          unless criteria[ :array ] 
-            if criteria[ :type ] == ::Object 
+          type = criteria[ :type ]
+          has_multiple_types = type.is_a?( ::Array ) && criteria[ :compiler ]
+
+          unless criteria[ :array ]
+            if has_multiple_types
+              value = __types( method, args, value: value, criteria: criteria, &block )
+            elsif type == ::Object
               value = __object( method, args, value: value, criteria: criteria, &block )
-            else 
+            else
               value = __value( method, args, value: value, criteria: criteria, &block )
             end
           else
             value = @defaults_assigned[ method ] ? ::Array.new : value || ::Array.new
-            if criteria[ :type ] == ::Object
+            if has_multiple_types
+              value = __types_array( method, args, value: value, criteria: criteria, &block )
+            elsif type == ::Object
               value = __object_array( method, args, value: value, criteria: criteria, &block )
             else
               value = __values_array( method, args, value: value, criteria: criteria, &block )
@@ -84,11 +91,11 @@ module DynamicSchema
           end
 
           @defaults_assigned[ method ] = false
-          @values[ name ] = value 
+          @values[ name ] = value
         else
-          ::Kernel.raise ::NoMethodError, 
+          ::Kernel.raise ::NoMethodError,
             "There is no schema value or object '#{ method }' defined in this scope which includes: " \
-            "#{ @schema.keys.join( ', ' ) }." 
+            "#{ @schema.keys.join( ', ' ) }."
         end
       end
 
@@ -200,20 +207,56 @@ module DynamicSchema
       end
 
       def __object_array( method, arguments, value:, criteria:, &block )
-        attributes = __process_arguments( 
-          method, arguments, 
-          required_arguments: criteria[ :arguments ] 
+        attributes = __process_arguments(
+          method, arguments,
+          required_arguments: criteria[ :arguments ]
         )
         value.concat( [ attributes ].flatten.map { | a |
-          receiver = Receiver::Object.new( 
+          receiver = Receiver::Object.new(
             a,
-            converter: @converter, 
-            schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled, 
+            converter: @converter,
+            schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled,
             defaults: @defaults
           )
           receiver.instance_eval( &block ) if block
           receiver
         } )
+      end
+
+      def __types( method, arguments, value:, criteria:, &block )
+        argument = arguments.first
+        if block || argument.is_a?( ::Hash )
+          if block && !value.nil? && !value.is_a?( ::DynamicSchema::Receiver::Object )
+            value = nil
+          end
+          __object( method, arguments, value: value, criteria: criteria, &block )
+        else
+          scalar_criteria = criteria.merge( type: __non_object_types( criteria[ :type ] ) )
+          __value( method, arguments, value: value, criteria: scalar_criteria, &block )
+        end
+      end
+
+      def __types_array( method, arguments, value:, criteria:, &block )
+        items = [ arguments.first ].flatten
+        if block
+          __object_array( method, arguments, value: value, criteria: criteria, &block )
+        else
+          items.each do | item |
+            if item.is_a?( ::Hash )
+              __object_array( method, [ item ], value: value, criteria: criteria )
+            else
+              scalar_criteria = criteria.merge( type: __non_object_types( criteria[ :type ] ) )
+              __values_array( method, [ item ], value: value, criteria: scalar_criteria )
+            end
+          end
+          value
+        end
+      end
+
+      def __non_object_types( types )
+        types_array = types.is_a?( ::Array ) ? types : [ types ]
+        result = types_array.reject { | type | type == ::Object }
+        result.length == 1 ? result.first : result
       end
 
       def __value_block( method, value:, criteria:, &block )

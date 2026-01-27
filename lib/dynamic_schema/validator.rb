@@ -40,6 +40,33 @@ module DynamicSchema
       type_match
     end
 
+    def __validate_types( value, criteria, path, key, &block )
+      if value.is_a?( ::Hash )
+        traverse_and_validate_values(
+          value,
+          schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled,
+          path: "#{ ( path || '' ) + ( path ? '/' : '' ) + key.to_s }",
+          &block
+        )
+      else
+        scalar_types = __non_object_types( criteria[ :type ] )
+        unless value_matches_types?( value, scalar_types )
+          block.call( IncompatibleTypeError.new( path: path, key: key, type: criteria[ :type ], value: value ) )
+        end
+      end
+    end
+
+    def __validate_types_array( values, criteria, path, key, &block )
+      values.each do | value |
+        __validate_types( value, criteria, path, key, &block )
+      end
+    end
+
+    def __non_object_types( types )
+      types_array = types.is_a?( ::Array ) ? types : [ types ]
+      types_array.reject { | type | type == ::Object }
+    end
+
     def traverse_and_validate_values( values, schema:, path: nil, options: nil, &block )
       path.chomp( '/' ) if path
       unless values.respond_to?( :[] )
@@ -59,8 +86,13 @@ module DynamicSchema
             end
           end
         elsif !criteria[ :default_assigned ] && !value.nil?
+          type = criteria[ :type ]
+          has_multiple_types = type.is_a?( ::Array ) && criteria[ :compiler ]
+
           unless criteria[ :array ]
-            if criteria[ :type ] == Object
+            if has_multiple_types
+              __validate_types( value, criteria, path, key, &block )
+            elsif type == Object
               traverse_and_validate_values(
                 values[ name ],
                 schema: criteria[ :schema ] ||= criteria[ :compiler ].compiled,
@@ -68,14 +100,16 @@ module DynamicSchema
                 &block
               )
             else
-              if criteria[ :type ] && value && !criteria[ :default_assigned ]
-                unless value_matches_types?( value, criteria[ :type ] )
-                  block.call( IncompatibleTypeError.new( path: path, key: key, type: criteria[ :type ], value: value ) )
+              if type && value && !criteria[ :default_assigned ]
+                unless value_matches_types?( value, type )
+                  block.call( IncompatibleTypeError.new( path: path, key: key, type: type, value: value ) )
                 end
               end
             end
           else
-            if criteria[ :type ] == Object
+            if has_multiple_types
+              __validate_types_array( Array( value ), criteria, path, key, &block )
+            elsif type == Object
               groups = Array( value )
               groups.each do | group |
                 traverse_and_validate_values(

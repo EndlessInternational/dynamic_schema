@@ -46,6 +46,8 @@ You can find a full OpenAI request example in the `/examples` folder of this rep
 - [Objects](#objects)
 - [Types](#types)
   - [Custom Types](#custom-types)
+  - [Multiple Types](#multiple-types)
+  - [Multiple Types with Nested Schema](#multiple-types-with-nested-schema)
 - [Options](#options)
   - [default Option](#default-option)
   - [required Option](#required-option)
@@ -441,6 +443,133 @@ When using a block with a custom type:
 - You can provide an existing instance and still use a block to configure it further
 
 This is particularly useful when integrating with `DynamicSchema::Struct` or other custom classes that need to be configured within a schema.
+
+### Multiple Types
+
+You can specify multiple types for a value by providing an array of types. The value must match one of the listed types.
+
+```ruby
+schema = DynamicSchema.define do
+  enabled [ TrueClass, FalseClass ]
+  identifier [ String, Integer ]
+end
+
+result = schema.build! do
+  enabled true
+  identifier 12345
+end
+
+result[ :enabled ]     # => true
+result[ :identifier ]  # => 12345
+```
+
+Validation ensures the value matches one of the specified types:
+
+```ruby
+schema.valid?( { enabled: true } )        # => true
+schema.valid?( { enabled: 'yes' } )       # => false (string not in types)
+schema.valid?( { identifier: 'abc' } )    # => true
+schema.valid?( { identifier: 123 } )      # => true
+```
+
+### Multiple Types with Nested Schema
+
+When you combine multiple types with a block, you create a field that can be either a nested object (defined by the block) or one of the scalar types. The decision is made at runtime:
+
+- **Hash values** (or blocks in Builder) are processed using the nested schema
+- **Non-hash values** are validated against the scalar types in the array
+
+This is useful for APIs where a field might be either a structured object or a simple value like a boolean.
+
+#### Builder Example
+
+```ruby
+schema = DynamicSchema.define do
+  # 'data' can be either a nested object OR true/false
+  data [ Object, TrueClass, FalseClass ] do
+    name String
+    value Integer
+  end
+end
+
+# Using as a nested object (with block)
+result = schema.build! do
+  data do
+    name 'example'
+    value 42
+  end
+end
+result[ :data ][ :name ]   # => 'example'
+
+# Using as a nested object (with hash)
+result = schema.build! do
+  data( { name: 'from hash', value: 100 } )
+end
+result[ :data ][ :name ]  # => 'from hash'
+
+# Using as a boolean
+result = schema.build! do
+  data true
+end
+result[ :data ]  # => true
+```
+
+#### Struct Example
+
+```ruby
+Settings = DynamicSchema::Struct.define do
+  config [ Object, TrueClass, FalseClass ] do
+    host String
+    port Integer
+  end
+end
+
+# With nested object - accessed via dot notation
+settings = Settings.build( config: { host: 'localhost', port: 8080 } )
+settings.config.host  # => 'localhost'
+settings.config.port  # => 8080
+
+# With boolean - returned as-is
+settings = Settings.build( config: false )
+settings.config  # => false
+```
+
+#### Arrays with Multiple Types
+
+Combine with `array: true` to create arrays where each element can be either a nested object or a scalar:
+
+```ruby
+schema = DynamicSchema.define do
+  items [ Object, TrueClass, FalseClass ], array: true do
+    name String
+  end
+end
+
+result = schema.build! do
+  items( { name: 'first' } )
+  items true
+  items( { name: 'second' } )
+  items false
+end
+
+result[ :items ]  # => [ { name: 'first' }, true, { name: 'second' }, false ]
+```
+
+#### Validation
+
+Validation checks that hash values conform to the nested schema and non-hash values match one of the scalar types:
+
+```ruby
+schema = DynamicSchema.define do
+  data [ Object, TrueClass, FalseClass ] do
+    value Integer
+  end
+end
+
+schema.valid?( { data: { value: 42 } } )  # => true (valid nested object)
+schema.valid?( { data: true } )           # => true (valid boolean)
+schema.valid?( { data: 'invalid' } )      # => false (string not in types)
+```
 
 ---
 
